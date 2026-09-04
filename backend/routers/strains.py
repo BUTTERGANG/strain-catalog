@@ -9,6 +9,7 @@ from backend.database import get_db
 from backend.models.strain import Strain
 from backend.models.review import Review
 from backend.templates import render_page
+from backend.models.wishlist import WishlistItem, DispensaryVisit
 
 router = APIRouter(prefix="/strains", tags=["strains"])
 
@@ -43,6 +44,7 @@ async def strain_list(
     effect_filter: str = Query("", alias="effect"),
     terpene_filter: str = Query("", alias="terpene"),
     breeder_filter: str = Query("", alias="breeder"),
+    parent_filter: str = Query("", alias="parent"),
     search: str = Query(""),
     sort: str = Query("name"),
     db: AsyncSession = Depends(get_db),
@@ -55,12 +57,14 @@ async def strain_list(
 
     if breeder_filter:
         query = query.where(Strain.breeder.ilike(f"%{breeder_filter}%"))
+    
+    # Parent-based search — find strains whose genetics mention a parent name
+    if parent_filter:
+        query = query.where(Strain.genetics.ilike(f"%{parent_filter}%"))
 
-    # Effect filter — search within JSON effects array
     if effect_filter:
         query = query.where(Strain.effects.ilike(f"%{effect_filter}%"))
 
-    # Terpene filter — search within JSON terpenes array  
     if terpene_filter:
         query = query.where(Strain.terpenes.ilike(f"%{terpene_filter}%"))
 
@@ -105,6 +109,11 @@ async def strain_list(
                        "Dutch Passion": "Dutch Passion", "Royal Queen Seeds": "Royal Queen Seeds",
                        "Sensi Seeds": "Sensi Seeds", "Nirvana Seeds": "Nirvana Seeds",
                        "TH Seeds": "TH Seeds", "Seedism Seeds": "Seedism Seeds"}
+    parent_options = {"": "Any Parent", "OG Kush": "OG Kush", "Blueberry": "Blueberry",
+                      "Sour Diesel": "Sour Diesel", "White Widow": "White Widow",
+                      "Afghani": "Afghani", "Haze": "Haze", "Bubba Kush": "Bubba Kush",
+                      "Chemdawg": "Chemdawg", "Skunk": "Skunk", "Northern Lights": "Northern Lights",
+                      "Jack Herer": "Jack Herer", "GSC": "Girl Scout Cookies", "Blue Dream": "Blue Dream"}
 
     for s in strains:
         effects = s.effect_list
@@ -126,12 +135,18 @@ async def strain_list(
         breeder_tag = f'<span class="breeder-badge mt-1">👨‍🌾 {s.breeder[:35]}</span>' if s.breeder else ""
         stars = "★" * round(s.rating) + "☆" * (5 - round(s.rating))
 
-        cards_html += f"""<a href="/strains/{s.id}" class="strain-card {type_class}">
-            <div class="relative overflow-hidden">
-                {image_html}
-                {f'<span class="absolute top-2 right-2 text-xs bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">{s.type_emoji}</span>' if img else ''}
-            </div>
-            <div class="p-4">
+        cards_html += f"""<div class="strain-card {type_class} relative">
+            <a href="/strains/{s.id}" class="block">
+                <div class="relative overflow-hidden">
+                    {image_html}
+                    {f'<span class="absolute top-2 right-2 text-xs bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">{s.type_emoji}</span>' if img else ''}
+                </div>
+            </a>
+            <label class="absolute top-2 left-2 z-10 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1 text-xs cursor-pointer flex items-center gap-1 hover:bg-weed-700/60 transition" onclick="event.stopPropagation()">
+                <input type="checkbox" class="compare-cb" value="{s.id}" onchange="updateCompare()" style="accent-color:#22c55e">
+                <span class="text-neutral-300 text-[10px]">Compare</span>
+            </label>
+            <a href="/strains/{s.id}" class="block p-4">
                 <div class="flex items-start justify-between gap-2">
                     <h3 class="font-semibold text-lg group-hover:text-weed-400 transition line-clamp-1 flex-1">{s.name}</h3>
                     <span class="text-yellow-500 text-xs shrink-0">{stars}</span>
@@ -144,8 +159,8 @@ async def strain_list(
                 {f'<div class="mt-1">{terp_badge}</div>' if terp_badge else ''}
                 {breeder_tag}
                 <div class="flex flex-wrap gap-1 mt-2">{effects_html}</div>
-            </div>
-        </a>"""
+            </a>
+        </div>"""
 
     # Pagination
     pagination = ""
@@ -199,6 +214,12 @@ async def strain_list(
             </select>
         </div>
         <div>
+            <label class="text-xs text-neutral-500 block mb-1">Parent</label>
+            <select name="parent" class="w-32">
+                {''.join(f'<option value="{k}"{" selected" if parent_filter==k else ""}>{v}</option>' for k,v in parent_options.items())}
+            </select>
+        </div>
+        <div>
             <label class="text-xs text-neutral-500 block mb-1">Sort</label>
             <select name="sort" class="w-28">
                 {''.join(f'<option value="{k}"{" selected" if sort==k else ""}>{v}</option>' for k,v in sort_options.items())}
@@ -216,10 +237,33 @@ async def strain_list(
     </div>
     <form method="get" action="/strains" class="mb-6 bg-elevated border border-glass rounded-xl p-4">{filters_html}</form>
     {f'<div class="flex flex-wrap gap-2 mb-4">{active_filters_html}</div>' if active_filters_html else ''}
+    <div class="flex items-center justify-between mb-4">
+        <div class="text-sm text-neutral-500">
+            <span id="compare-count">0</span> selected for comparison
+        </div>
+        <a id="compare-btn" href="/strains/compare" class="btn btn-primary text-sm !py-1.5 opacity-50 pointer-events-none">
+            🔬 Compare
+        </a>
+    </div>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{cards_html}</div>
     {pagination}
 
     <script>
+    // ── Compare Function ──
+    function updateCompare() {{
+        var cbs = document.querySelectorAll('.compare-cb:checked');
+        var ids = [];
+        cbs.forEach(function(cb) {{ ids.push(cb.value); }});
+        document.getElementById('compare-count').textContent = ids.length;
+        var btn = document.getElementById('compare-btn');
+        if (ids.length >= 2) {{
+            btn.href = '/strains/compare?ids=' + ids.join(',');
+            btn.classList.remove('opacity-50', 'pointer-events-none');
+        }} else {{
+            btn.href = '/strains/compare';
+            btn.classList.add('opacity-50', 'pointer-events-none');
+        }}
+    }}
     // ── Search Autocomplete ──
     (function() {{
         const input = document.querySelector('input[name="search"]');
@@ -258,6 +302,123 @@ async def strain_list(
     }})();
     </script>""", f"Strains — WEED", request=request)
     return html
+
+
+# ── Strain Comparison (side-by-side) ──
+@router.get("/compare", response_class=HTMLResponse)
+async def strain_compare(
+    request: Request,
+    ids: str = Query("", alias="ids"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Compare 2-5 strains side-by-side."""
+    strain_ids = [i.strip() for i in ids.split(",") if i.strip()][:5]
+    if len(strain_ids) < 2:
+        return render_page("""<div class="text-center py-12">
+            <p class="text-4xl mb-4">🔬</p>
+            <h1 class="text-2xl font-display text-weed-400 mb-2">Strain Comparison</h1>
+            <p class="text-neutral-500 mb-4">Select 2-5 strains to compare side-by-side.</p>
+            <p class="text-sm text-neutral-600">Browse strains and click the compare checkbox on each card.</p>
+        </div>""", "Compare — WEED", request=request)
+
+    strains = []
+    for sid in strain_ids:
+        result = await db.execute(select(Strain).where(Strain.id == sid))
+        s = result.scalar_one_or_none()
+        if s:
+            strains.append(s)
+
+    if len(strains) < 2:
+        return HTMLResponse("Need at least 2 strains to compare", status_code=400)
+
+    # Build comparison table
+    def terp_str(s):
+        terps = s.terpene_list
+        if not terps:
+            return '<span class="text-neutral-500">—</span>'
+        return "<br>".join(f'{t["name"].title()}: {t["percentage"]}%' for t in terps[:4])
+
+    def effect_str(s):
+        effects = s.effect_list
+        if not effects:
+            return '<span class="text-neutral-500">—</span>'
+        return " ".join(f'<span class="pill">{e}</span>' for e in effects[:5])
+
+    def star_str(rating):
+        return "★" * round(rating) + "☆" * (5 - round(rating))
+
+    cols_html = ""
+    for s in strains:
+        img = s.image_url
+        img_html = f'<img src="{img}" class="w-full aspect-square object-cover rounded-lg" loading="lazy">' if img else f'<div class="w-full aspect-square bg-elevated rounded-lg flex items-center justify-center text-5xl">{s.type_emoji}</div>'
+        cols_html += f"""<div class="flex flex-col">
+            <a href="/strains/{s.id}" class="block mb-3">{img_html}</a>
+            <h3 class="font-semibold text-lg text-weed-400">{s.name}</h3>
+            {f'<span class="breeder-badge text-xs mt-1">👨‍🌾 {s.breeder[:40]}</span>' if s.breeder else ''}
+            <div class="text-yellow-500 text-sm mt-1">{star_str(s.rating)}</div>
+            <div class="text-xs text-neutral-500 mt-1 capitalize">{s.strain_type} · {s.thc_display}</div>
+            {f'<div class="text-xs text-neutral-500 mt-1">{s.sativa_pct or "?"}% S / {s.indica_pct or "?"}% I</div>' if s.sativa_pct or s.indica_pct else ''}
+            {f'<div class="text-xs text-neutral-500 mt-1">🌱 {s.flowering_days}d · {s.seed_type}</div>' if s.flowering_days else ''}
+            <hr class="border-glass my-3">
+            <div class="space-y-2 text-sm">{effect_str(s)}</div>
+            {f'<hr class="border-glass my-3"><div class="text-xs space-y-1">{terp_str(s)}</div>' if s.terpene_list else ''}
+            {f'<hr class="border-glass my-3"><div class="text-xs text-neutral-300"><strong>🧬</strong> {s.genetics[:80]}</div>' if s.genetics else ''}
+            <div class="mt-auto pt-3">
+                <a href="/strains/{s.id}" class="btn btn-primary text-xs w-full text-center">View Details</a>
+            </div>
+        </div>"""
+
+    html = render_page(f"""<div class="mb-6">
+        <h1 class="text-3xl font-display text-weed-400">🔬 Strain Comparison</h1>
+        <p class="text-neutral-400 mt-1">Comparing {len(strains)} strains</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 {'lg:grid-cols-3' if len(strains) >= 3 else ''} {'xl:grid-cols-4' if len(strains) >= 4 else ''} gap-4">
+        {cols_html}
+    </div>
+    <div class="mt-8 text-center">
+        <a href="/strains" class="btn btn-secondary">← Back to Strains</a>
+    </div>""", "Compare — WEED", request=request)
+    return html
+
+
+# ── Wishlist toggle ──
+@router.post("/{strain_id}/wishlist")
+async def toggle_wishlist(strain_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    from fastapi.responses import JSONResponse
+    user_id = request.state.user_id
+    if not user_id:
+        return JSONResponse({"error": "Not logged in"}, status_code=401)
+
+    existing = await db.execute(
+        select(WishlistItem).where(
+            WishlistItem.user_id == user_id,
+            WishlistItem.strain_id == strain_id,
+        )
+    )
+    item = existing.scalar_one_or_none()
+    if item:
+        await db.delete(item)
+        await db.commit()
+        return JSONResponse({"saved": False, "message": "Removed from wishlist"})
+    else:
+        db.add(WishlistItem(user_id=user_id, strain_id=strain_id))
+        await db.commit()
+        return JSONResponse({"saved": True, "message": "Saved to wishlist"})
+
+
+@router.get("/{strain_id}/wishlist-status")
+async def wishlist_status(strain_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+    from fastapi.responses import JSONResponse
+    user_id = request.state.user_id
+    if not user_id:
+        return JSONResponse({"saved": False})
+    existing = await db.execute(
+        select(WishlistItem).where(
+            WishlistItem.user_id == user_id,
+            WishlistItem.strain_id == strain_id,
+        )
+    )
+    return JSONResponse({"saved": existing.scalar_one_or_none() is not None})
 
 
 @router.get("/{strain_id}", response_class=HTMLResponse)
@@ -530,7 +691,7 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <!-- THC Card -->
         <div class="stat-card">
             <div class="text-3xl font-bold text-weed-400">{strain.thc_display}</div>
@@ -548,6 +709,13 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
         <div class="stat-card">
             <div class="text-3xl">{strain.type_emoji}</div>
             <div class="text-xs text-neutral-500 mt-2 uppercase tracking-wider">{strain.strain_type.title()}</div>
+            {f'<div class="text-xs text-neutral-500 mt-1">{strain.sativa_pct or "?"}% S / {strain.indica_pct or "?"}% I</div>' if strain.sativa_pct or strain.indica_pct else ''}
+        </div>
+        <!-- Flowering Card -->
+        <div class="stat-card">
+            <div class="text-3xl font-bold text-weed-400">{strain.flowering_days or "—"}</div>
+            <div class="text-xs text-neutral-500 mt-2 uppercase tracking-wider">Flower Days</div>
+            {f'<div class="text-xs text-neutral-500 mt-1 capitalize">{strain.seed_type}</div>' if strain.seed_type else ''}
         </div>
     </div>
 

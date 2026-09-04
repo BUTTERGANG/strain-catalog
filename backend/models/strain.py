@@ -36,6 +36,14 @@ class Strain(Base):
     is_landrace: Mapped[bool] = mapped_column(default=False)
     landrace_origin: Mapped[str] = mapped_column(String(200), default="")
 
+    # Flowering / seed info
+    flowering_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    seed_type: Mapped[str] = mapped_column(String(50), default="")  # feminized, regular, clone only
+
+    # Precise genetics percentages
+    sativa_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    indica_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     # Description
     description: Mapped[str] = mapped_column(Text, default="")
 

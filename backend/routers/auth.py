@@ -24,7 +24,7 @@ async def login_page(request: Request):
 <button type="submit" class="w-full bg-weed-600 hover:bg-weed-500 text-white font-medium py-2 rounded-lg transition">Sign In</button>
 </form>
 <p class="text-center text-sm text-neutral-500 mt-4">No account? <a href="/auth/register" class="text-weed-400 hover:underline">Register</a></p>
-<p class="text-center text-xs text-neutral-600 mt-2">Demo: sam@weed.app / weed420</p>
+<p class="text-center text-xs text-neutral-600 mt-2"><a href="/profile/forgot-password" class="hover:text-weed-400 transition">Forgot password?</a></p>
 </div></div></body></html>"""
 
 

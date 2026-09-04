@@ -180,25 +180,12 @@ async def landrace_page(request: Request, db: AsyncSession = Depends(get_db)):
 
     total = (await db.execute(select(func.count()).select_from(Strain))).scalar() or 0
 
-    known_landrace_names = [
-        "Afghani", "Hindu Kush", "Purple Kush", "Bubba Kush", "OG Kush",
-        "Durban Poison", "Thai", "Maui Wowie", "Panama Red", "Acapulco Gold",
-        "Colombian Gold", "Lamb's Bread", "Malawi Gold", "Red Congolese",
-        "Kilimanjaro", "Dragon Fruit", "Cambodian", "Vietnamese",
-    ]
-    landraces = []
-    for name in known_landrace_names:
-        result = await db.execute(select(Strain).where(Strain.name.ilike(f"%{name}%")).limit(1))
-        s = result.scalar_one_or_none()
-        if s:
-            landraces.append(s)
-
-    marked = await db.execute(
+    # Get all strains marked as landrace in DB
+    result = await db.execute(
         select(Strain).where(Strain.is_landrace == True).order_by(Strain.name)
     )
-    for s in marked.scalars().all():
-        if s not in landraces:
-            landraces.append(s)
+    landraces = list(result.scalars().all())
+    landrace_count = len(landraces)
 
     cards_html = ""
     for s in landraces:

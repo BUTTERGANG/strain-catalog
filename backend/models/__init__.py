@@ -4,5 +4,6 @@ from backend.models.dispensary import Dispensary, MenuItem
 from backend.models.review import Review
 from backend.models.user import User
 from backend.models.lineage import StrainLink
+from backend.models.wishlist import WishlistItem, DispensaryVisit
 
-__all__ = ["Strain", "Dispensary", "MenuItem", "Review", "User", "StrainLink"]
+__all__ = ["Strain", "Dispensary", "MenuItem", "Review", "User", "StrainLink", "WishlistItem", "DispensaryVisit"]

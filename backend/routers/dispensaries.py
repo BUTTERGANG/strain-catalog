@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.models.dispensary import Dispensary, MenuItem
 from backend.models.strain import Strain
+from backend.templates import render_page
 
 router = APIRouter(prefix="/dispensaries", tags=["dispensaries"])
 
@@ -63,46 +64,45 @@ async def dispensary_list(
     cards_html = ""
     for d in dispos:
         delivery_tag = '<span class="text-xs text-green-400">🚚 Delivery</span>' if d.delivery_available else ''
-        cards_html += f"""<a href="/dispensaries/{d.id}" class="block bg-neutral-900 border border-neutral-800 rounded-xl p-4 hover:border-weed-600 transition group">
-            <div class="flex items-start gap-3">
-                <div class="w-12 h-12 bg-neutral-800 rounded-lg flex items-center justify-center text-xl shrink-0">🏪</div>
+        cards_html += f"""<a href="/dispensaries/{d.id}" class="strain-card">
+            <div class="p-4 flex items-start gap-3">
+                <div class="w-12 h-12 bg-elevated rounded-lg flex items-center justify-center text-xl shrink-0">🏪</div>
                 <div class="min-w-0">
                     <h3 class="font-semibold group-hover:text-weed-400 transition truncate">{d.name}</h3>
                     <p class="text-xs text-neutral-500">{d.city}, {d.state}{f' · ★ {d.rating}' if d.rating else ''}</p>
-                    <div class="flex gap-2 mt-1">{delivery_tag}<span class="text-xs text-neutral-500">{d.license_type}</span></div>
+                    <div class="flex gap-2 mt-1">{delivery_tag}<span class="text-xs text-neutral-500 capitalize">{d.license_type or "recreational"}</span></div>
                 </div>
             </div>
         </a>"""
 
     if not cards_html:
-        cards_html = '<div class="col-span-full text-center py-12 text-neutral-500"><p class="text-4xl mb-2">🏪</p><p>No dispensaries found yet.</p><p class="text-sm mt-2">Scraping Leafly dispensaries is coming next.</p></div>'
+        cards_html = '<div class="col-span-full text-center py-12 text-neutral-500"><p class="text-4xl mb-2">🏪</p><p>No dispensaries found yet.</p><p class="text-sm mt-2">We have 100 dispensaries in the database — check your filters.</p></div>'
 
-    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Dispensaries — WEED</title><link rel="stylesheet" href="/static/css/app.css"></head><body class="bg-black text-white min-h-screen">
-    <nav class="bg-neutral-900 border-b border-neutral-800 px-4 py-3">
-    <div class="max-w-6xl mx-auto flex items-center justify-between">
-        <a href="/" class="text-2xl font-display text-weed-400">🌿 WEED</a>
-        <div class="flex items-center gap-4 text-sm">
-            <a href="/strains" class="text-neutral-300 hover:text-white transition">Strains</a>
-            <a href="/dispensaries" class="text-white font-medium">Dispensaries</a>
-            <a href="/map" class="text-neutral-300 hover:text-white transition">Map</a>
-            <a href="/seeds" class="text-neutral-300 hover:text-white transition">🌱 Seeds</a>
-            {'' if is_logged_in else '<a href="/auth/login" class="text-weed-400 hover:underline">Sign In</a>'}
-            {f'<a href="/auth/logout" class="text-neutral-400 hover:text-white transition">Logout</a>' if is_logged_in else '<a href="/auth/register" class="bg-weed-700 hover:bg-weed-600 px-3 py-1.5 rounded-lg transition">Join</a>'}
-        </div>
+    html = render_page(f"""<div class="mb-6">
+        <h1 class="text-3xl font-display text-weed-400">🏪 Dispensaries</h1>
+        <p class="text-neutral-400">{total} locations</p>
     </div>
-    </nav>
-    <main class="max-w-6xl mx-auto px-4 py-8">
-    <div class="mb-6"><h1 class="text-3xl font-display text-weed-400">🏪 Dispensaries</h1><p class="text-neutral-400">{total} locations</p></div>
-    <form method="get" action="/dispensaries" class="flex flex-wrap gap-3 mb-6 items-center">
-        <input type="text" name="search" value="{search}" placeholder="Search name..." class="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm w-48 focus:outline-none focus:border-weed-500">
-        <input type="text" name="state" value="{state}" placeholder="State (CA, CO, ...)" class="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:border-weed-500">
-        <input type="text" name="city" value="{city}" placeholder="City" class="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm w-40 focus:outline-none focus:border-weed-500">
-        <button type="submit" class="bg-weed-700 hover:bg-weed-600 px-4 py-2 rounded-lg text-sm transition">Filter</button>
-        <a href="/dispensaries" class="text-neutral-500 text-sm hover:text-white transition">Clear</a>
+    <form method="get" action="/dispensaries" class="mb-6 bg-elevated border border-glass rounded-xl p-4">
+        <div class="flex flex-wrap gap-3 items-end">
+            <div>
+                <label class="text-xs text-neutral-500 block mb-1">Search</label>
+                <input type="text" name="search" value="{search}" placeholder="Dispensary name..." class="w-40 md:w-48">
+            </div>
+            <div>
+                <label class="text-xs text-neutral-500 block mb-1">State</label>
+                <input type="text" name="state" value="{state}" placeholder="CA, CO, ..." class="w-28">
+            </div>
+            <div>
+                <label class="text-xs text-neutral-500 block mb-1">City</label>
+                <input type="text" name="city" value="{city}" placeholder="City" class="w-32">
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <a href="/dispensaries" class="btn btn-ghost text-sm">Clear</a>
+            </div>
+        </div>
     </form>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{cards_html}</div>
-    </main></body></html>"""
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{cards_html}</div>""", "Dispensaries — WEED", request=request)
     return html
 
 
@@ -152,28 +152,9 @@ async def dispensary_detail(dispensary_id: str, request: Request, db: AsyncSessi
     else:
         menu_html = '<p class="text-neutral-500 text-sm italic">No menu items yet.</p>'
 
-    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>{dispo.name} — WEED</title><link rel="stylesheet" href="/static/css/app.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    </head><body class="bg-black text-white min-h-screen">
-    <nav class="bg-neutral-900 border-b border-neutral-800 px-4 py-3">
-    <div class="max-w-6xl mx-auto flex items-center justify-between">
-        <a href="/" class="text-2xl font-display text-weed-400">🌿 WEED</a>
-        <div class="flex items-center gap-4 text-sm">
-            <a href="/strains" class="text-neutral-300 hover:text-white transition">Strains</a>
-            <a href="/dispensaries" class="text-neutral-300 hover:text-white transition">Dispensaries</a>
-            <a href="/map" class="text-neutral-300 hover:text-white transition">Map</a>
-            <a href="/seeds" class="text-neutral-300 hover:text-white transition">🌱 Seeds</a>
-            {'' if is_logged_in else '<a href="/auth/login" class="text-weed-400 hover:underline">Sign In</a>'}
-            {f'<a href="/auth/logout" class="text-neutral-400 hover:text-white transition">Logout</a>' if is_logged_in else '<a href="/auth/register" class="bg-weed-700 hover:bg-weed-600 px-3 py-1.5 rounded-lg transition">Join</a>'}
-        </div>
-    </div>
-    </nav>
-    <main class="max-w-6xl mx-auto px-4 py-8">
-    <div class="flex flex-col md:flex-row gap-8 mb-8">
+    html = render_page(f"""<div class="flex flex-col md:flex-row gap-8 mb-8">
         <div class="md:w-1/3">
-            <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3">
+            <div class="bg-elevated border border-glass rounded-xl p-4 space-y-3">
                 <h1 class="text-2xl font-display text-weed-400">{dispo.name}</h1>
                 {f'<p class="text-sm text-neutral-300">{dispo.address}</p>' if dispo.address else ''}
                 <p class="text-sm text-neutral-400">{dispo.city}, {dispo.state} {dispo.zip_code}</p>
@@ -181,10 +162,10 @@ async def dispensary_detail(dispensary_id: str, request: Request, db: AsyncSessi
                 {f'<a href="{dispo.website}" target="_blank" class="block text-sm text-weed-400 hover:underline">{dispo.website}</a>' if dispo.website else ''}
                 {f'<p class="text-sm text-neutral-300">📞 {dispo.phone}</p>' if dispo.phone else ''}
                 <div class="flex gap-2 mt-2">
-                    <span class="text-xs bg-neutral-800 px-2 py-1 rounded capitalize">{dispo.license_type}</span>
-                    {'<span class="text-xs bg-green-900 text-green-200 px-2 py-1 rounded">🚚 Delivery</span>' if dispo.delivery_available else ''}
+                    <span class="pill capitalize">{dispo.license_type}</span>
+                    {'<span class="pill bg-green-900 text-green-200">🚚 Delivery</span>' if dispo.delivery_available else ''}
                 </div>
-                {f'<div class="text-xs text-neutral-500 space-y-1 pt-2 border-t border-neutral-800">{hours_html}</div>' if hours_html else ''}
+                {f'<div class="text-xs text-neutral-500 space-y-1 pt-2 border-t border-glass">{hours_html}</div>' if hours_html else ''}
                 {f'<p class="text-sm text-neutral-300 mt-3">{dispo.description}</p>' if dispo.description else ''}
             </div>
             {f'<div id="map" class="h-48 rounded-xl mt-4" data-lat="{dispo.lat}" data-lon="{dispo.lon}"></div>' if dispo.lat and dispo.lon else ''}
@@ -194,7 +175,8 @@ async def dispensary_detail(dispensary_id: str, request: Request, db: AsyncSessi
             {menu_html}
         </div>
     </div>
-    </main>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script>
     (function(){{
         var mapDiv = document.getElementById('map');
@@ -206,6 +188,5 @@ async def dispensary_detail(dispensary_id: str, request: Request, db: AsyncSessi
         L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png').addTo(map);
         L.marker([lat, lon]).addTo(map).bindPopup('{dispo.name}');
     }})();
-    </script>
-    </body></html>"""
+    </script>""", f"{dispo.name} — WEED", request=request)
     return html

@@ -17,6 +17,7 @@ def render_page(content: str, title: str = "WEED", request: Request = None) -> s
                 <a href="/dispensaries" class="text-neutral-300 hover:text-white transition">Dispensaries</a>
                 <a href="/map" class="text-neutral-300 hover:text-white transition">Map</a>
                 <a href="/seeds" class="text-neutral-300 hover:text-white transition">🌱 Seeds</a>
+                {f'<a href="/profile" class="text-neutral-300 hover:text-white transition">Profile</a>' if is_logged_in else ''}
                 {'' if is_logged_in else '<a href="/auth/login" class="text-weed-400 hover:underline">Sign In</a>'}
                 {f'<a href="/auth/logout" class="text-neutral-400 hover:text-white transition">Logout</a>' if is_logged_in else '<a href="/auth/register" class="btn btn-primary">Join</a>'}
             </div>
