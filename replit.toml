@@ -1,0 +1,8 @@
+[env]
+PORT = "8003"
+
+[run]
+args = ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "$PORT"]
+
+[deployment]
+run = ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "$PORT"]

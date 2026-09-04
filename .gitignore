@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.egg
+dist/
+build/
+
+# Data files (too large for git — generated or downloaded)
+data/seedfinder_strains.json
+data/cannabis_intelligence_database.csv
+data/lineage_checkpoint.json
+data/weed.db*
+data/cannabis.json
+
+# Environment
+.env
+*.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Replit
+.replit-python
+.pythonlibs
+.last_prompt

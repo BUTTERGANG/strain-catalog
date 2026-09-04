@@ -1,0 +1,23 @@
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[nix]
+channel = "stable-25_05"
+packages = ["sqlite"]
+
+[workflow]
+name = "WEED"
+mode = "parallel"
+
+[[workflow.tasks]]
+id = "install"
+name = "Install dependencies"
+command = "pip install -r requirements.txt"
+mode = "serial"
+
+[[workflow.tasks]]
+id = "start"
+name = "Start application"
+dependsOn = ["install"]
+command = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
