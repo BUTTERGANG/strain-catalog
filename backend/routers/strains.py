@@ -1,5 +1,6 @@
 """Strains router — catalog, search, detail views with modern image-first design."""
 
+import html as html_mod
 import json
 from fastapi import APIRouter, Request, Depends, Query
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -187,7 +188,7 @@ async def strain_list(
     filters_html = f"""<div class="flex flex-wrap gap-3 items-end">
         <div>
             <label class="text-xs text-neutral-500 block mb-1">Search</label>
-            <input type="text" name="search" value="{search}" placeholder="Search strains…" class="w-40 md:w-48">
+            <input type="text" name="search" value="{html_mod.escape(search, quote=True)}" placeholder="Search strains…" class="w-40 md:w-48">
         </div>
         <div>
             <label class="text-xs text-neutral-500 block mb-1">Type</label>
