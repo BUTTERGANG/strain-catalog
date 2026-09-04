@@ -2,11 +2,12 @@
 
 import html as html_mod
 import json
+import os
 from fastapi import APIRouter, Request, Depends, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.database import get_db
+from backend.database import get_db, async_session
 from backend.models.strain import Strain
 from backend.models.review import Review
 from backend.templates import render_page
@@ -422,9 +423,37 @@ async def wishlist_status(strain_id: str, request: Request, db: AsyncSession = D
     return JSONResponse({"saved": existing.scalar_one_or_none() is not None})
 
 
+@router.get("/sitemap.xml")
+async def sitemap():
+    """SEO sitemap — homepage, static pages, top strains."""
+    from fastapi.responses import Response
+    from sqlalchemy import text
+    async with async_session() as db:
+        rows = (await db.execute(text(
+            "SELECT slug FROM strains WHERE slug IS NOT NULL ORDER BY review_count DESC, name LIMIT 5000"
+        ))).fetchall()
+    base = os.getenv("SITE_URL", "http://localhost:8003")
+    urls = ["/", "/strains", "/dispensaries", "/map", "/seeds"]
+    xml_items = "".join(f"<url><loc>{base}{u}</loc></url>" for u in urls)
+    xml_items += "".join(f"<url><loc>{base}/strains/{slug}</loc></url>" for (slug,) in rows)
+    xml = f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{xml_items}</urlset>'
+    return Response(content=xml, media_type="application/xml")
+
+
+@router.get("/robots.txt")
+async def robots():
+    from fastapi.responses import Response
+    base = os.getenv("SITE_URL", "http://localhost:8003")
+    return Response(
+        content=f"User-agent: *\nAllow: /\nDisallow: /auth\nDisallow: /profile\n\nSitemap: {base}/strains/sitemap.xml\n",
+        media_type="text/plain",
+    )
+
+
 @router.get("/{strain_id}", response_class=HTMLResponse)
 async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Strain).where(Strain.id == strain_id))
+    # Try slug first (SEO URLs like /strains/blue-dream), fall back to ID
+    result = await db.execute(select(Strain).where((Strain.slug == strain_id) | (Strain.id == strain_id)))
     strain = result.scalar_one_or_none()
     if not strain:
         return HTMLResponse("Strain not found", status_code=404)

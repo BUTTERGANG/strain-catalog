@@ -26,10 +26,11 @@ async def get_db() -> AsyncSession:
 
 async def init_db():
     """Create all tables."""
-    from backend.models import strain, dispensary, review, user, wishlist  # noqa: F401
+    from backend.models import strain, dispensary, review, user, wishlist, session  # noqa: F401
 
     async with engine.begin() as conn:
         if "sqlite" in settings.database_url:
             await conn.exec_driver_sql("PRAGMA journal_mode=WAL")
             await conn.exec_driver_sql("PRAGMA busy_timeout=5000")
+            await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
         await conn.run_sync(Base.metadata.create_all)

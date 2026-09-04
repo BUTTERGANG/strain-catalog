@@ -53,6 +53,9 @@ class Strain(Base):
     # Source
     source: Mapped[str] = mapped_column(String(50), default="kaggle")  # kaggle, leafly, user
 
+    # SEO-friendly URL slug (e.g. "blue-dream")
+    slug: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

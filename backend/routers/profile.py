@@ -1,18 +1,28 @@
 """Profile router — user dashboard, wishlist, dispensary visits, password reset."""
+import hashlib
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Request, Depends, Query, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.database import get_db
+from backend.database import get_db, async_session
 from backend.models.user import User
 from backend.models.strain import Strain
+from backend.models.session import PasswordReset
 from backend.models.wishlist import WishlistItem, DispensaryVisit
 from backend.models.review import Review
-from backend.services.auth import hash_password, verify_password
-from backend.services.email import send_password_reset, create_reset_token, verify_reset_token
+from backend.services.auth import hash_password
+from backend.middleware import enforce_rate_limit
+from backend.services.email import send_password_reset
+from backend.config import settings
 from backend.templates import render_page
 
 router = APIRouter(prefix="/profile", tags=["profile"])
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def require_auth(request: Request):
@@ -129,7 +139,7 @@ async def profile_page(request: Request, db: AsyncSession = Depends(get_db)):
     return html
 
 
-# ── Password Reset ──
+# ── Password Reset (DB-backed tokens, 1hr expiry, one-time use) ──
 @router.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page(request: Request):
     return render_page("""<div class="max-w-sm mx-auto text-center py-12">
@@ -148,12 +158,25 @@ async def forgot_password_page(request: Request):
 
 
 @router.post("/forgot-password")
-async def forgot_password(email: str = Form(...), db: AsyncSession = Depends(get_db)):
+async def forgot_password(request: Request, email: str = Form(...), db: AsyncSession = Depends(get_db)):
+    if not enforce_rate_limit(request, "5/minute", "forgot-pw"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again in a minute.")
+
+    email = email.strip().lower()
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user:
-        token = create_reset_token(user.id, email)
+        import secrets
+        token = secrets.token_urlsafe(32)
+        reset = PasswordReset(
+            token_hash=_hash_token(token),
+            user_id=user.id,
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        )
+        db.add(reset)
+        await db.commit()
         await send_password_reset(email, token)
+    # Same response either way — no account enumeration
     return HTMLResponse("""<div class="max-w-sm mx-auto text-center py-12">
         <p class="text-4xl mb-4">📬</p>
         <h1 class="text-xl font-display text-weed-400 mb-2">Check Your Email</h1>
@@ -163,10 +186,7 @@ async def forgot_password(email: str = Form(...), db: AsyncSession = Depends(get
 
 
 @router.get("/reset-password", response_class=HTMLResponse)
-async def reset_password_page(token: str = Query(""), request: Request = None):
-    data = verify_reset_token(token)
-    if not data:
-        return HTMLResponse("Invalid or expired reset token", status_code=400)
+async def reset_password_page(request: Request, token: str = Query("")):
     return render_page(f"""<div class="max-w-sm mx-auto py-12">
         <h1 class="text-2xl font-display text-weed-400 mb-2 text-center">Reset Password</h1>
         <form method="post" action="/profile/reset-password" class="space-y-4">
@@ -181,20 +201,35 @@ async def reset_password_page(token: str = Query(""), request: Request = None):
 
 
 @router.post("/reset-password")
-async def reset_password(token: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_db)):
-    data = verify_reset_token(token)
-    if not data:
+async def reset_password(request: Request, token: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_db)):
+    if not enforce_rate_limit(request, "10/minute", "reset-pw"):
+        raise HTTPException(status_code=429, detail="Too many attempts. Try again in a minute.")
+
+    row = (await db.execute(
+        select(PasswordReset).where(PasswordReset.token_hash == _hash_token(token))
+    )).scalar_one_or_none()
+
+    if not row or row.used_at is not None or row.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         return HTMLResponse("Invalid or expired reset token", status_code=400)
 
-    user = await db.get(User, data["user_id"])
+    user = await db.get(User, row.user_id)
     if not user:
         return HTMLResponse("User not found", status_code=404)
 
     user.password_hash = hash_password(password)
+    row.used_at = datetime.now(timezone.utc)
     await db.commit()
+
+    # Invalidate all existing sessions for this user (password changed)
+    from sqlalchemy import delete as sa_delete
+    from backend.models.session import Session as SessionRow
+    async with async_session() as sess:
+        await sess.execute(sa_delete(SessionRow).where(SessionRow.user_id == user.id))
+        await sess.commit()
+
     return HTMLResponse("""<div class="max-w-sm mx-auto text-center py-12">
         <p class="text-4xl mb-4">✅</p>
         <h1 class="text-xl font-display text-weed-400 mb-2">Password Reset</h1>
-        <p class="text-sm text-neutral-500">Your password has been updated.</p>
+        <p class="text-sm text-neutral-500">Your password has been updated. Please sign in.</p>
         <a href="/auth/login" class="btn btn-primary mt-6">Sign In</a>
     </div>""")

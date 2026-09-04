@@ -4,21 +4,13 @@ Scaffolding: expects AGENTMAIL_API_KEY and AGENTMAIL_DOMAIN in env/.env.
 When keys aren't set, logs to console instead of sending.
 """
 import os
-import json
-from pathlib import Path
-from typing import Optional
 
 import httpx
-
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Read from .env or environment
 AGENTMAIL_API_KEY = os.getenv("AGENTMAIL_API_KEY", "")
 AGENTMAIL_DOMAIN = os.getenv("AGENTMAIL_DOMAIN", "")
 AGENTMAIL_FROM = os.getenv("AGENTMAIL_FROM", "noreply@weed.app")
-
-# In-memory password reset token store (would use DB in production)
-RESET_TOKENS: dict[str, dict] = {}
 
 
 async def send_email(to: str, subject: str, html_body: str) -> bool:
@@ -53,29 +45,9 @@ async def send_email(to: str, subject: str, html_body: str) -> bool:
         return False
 
 
-def create_reset_token(user_id: str, email: str) -> str:
-    """Create a password reset token."""
-    import secrets
-    token = secrets.token_urlsafe(32)
-    RESET_TOKENS[token] = {
-        "user_id": user_id,
-        "email": email,
-    }
-    return token
-
-
-def verify_reset_token(token: str) -> Optional[dict]:
-    """Verify a password reset token and return user info."""
-    data = RESET_TOKENS.get(token)
-    if not data:
-        return None
-    del RESET_TOKENS[token]  # One-time use
-    return data
-
-
 async def send_password_reset(email: str, token: str) -> bool:
-    """Send a password reset email."""
-    reset_url = f"http://localhost:8003/auth/reset-password?token={token}"
+    """Send a password reset email. Token is DB-backed; this just delivers the link."""
+    reset_url = f"{os.getenv('SITE_URL', 'http://localhost:8003')}/profile/reset-password?token={token}"
     html = f"""
     <div style="max-width:480px;margin:0 auto;font-family:system-ui,sans-serif">
         <div style="text-align:center;padding:24px 0">

@@ -1,13 +1,14 @@
-"""Rate limiting and session middleware."""
-from functools import wraps
+"""Rate limiting and session middleware (DB-backed sessions)."""
 from collections import defaultdict
 import time
-from fastapi import Request, HTTPException
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from backend.config import settings
-from backend.services.auth import get_session
+from backend.database import async_session
+from backend.services.auth import get_session_user_id
 
 _rl_store: dict[str, list] = defaultdict(list)
+_rl_persist: dict[str, list] = defaultdict(list)  # survives across workers via DB? no — per-worker, acceptable
 
 
 def _check_rate_limit(key: str, limit_str: str) -> bool:
@@ -28,20 +29,30 @@ def _check_rate_limit(key: str, limit_str: str) -> bool:
     return True
 
 
-def get_current_user(request: Request):
-    """Extract user_id from session cookie."""
-    token = request.cookies.get("session")
-    if not token:
-        return None
-    session = get_session(token)
-    if not session:
-        return None
-    return session["user_id"]
+def client_ip(request: Request) -> str:
+    """Best-effort client IP (works behind Replit/Caddy proxy)."""
+    fwd = request.headers.get("x-forwarded-for")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def enforce_rate_limit(request: Request, limit_str: str, bucket: str) -> bool:
+    """Public helper for route-level rate limiting."""
+    return _check_rate_limit(f"{bucket}:{client_ip(request)}", limit_str)
 
 
 class SessionMiddleware(BaseHTTPMiddleware):
-    """Middlewares for session and CSRF."""
+    """Resolves the session cookie to request.state.user_id via DB lookup."""
+
     async def dispatch(self, request: Request, call_next):
-        request.state.user_id = get_current_user(request)
+        token = request.cookies.get("session")
+        user_id = None
+        if token:
+            # One short DB session just for the auth lookup
+            async with async_session() as db:
+                user_id = await get_session_user_id(db, token)
+        request.state.user_id = user_id
+        request.state.session_token = token
         response = await call_next(request)
         return response
