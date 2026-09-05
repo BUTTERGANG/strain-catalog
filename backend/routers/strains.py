@@ -678,6 +678,86 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
     if not reviews_html:
         reviews_html = '<p class="text-neutral-500 text-sm italic text-center py-8">No reviews yet.</p>'
 
+    # ── Similar Strains: shared parents > same breeder > same type ──
+    similar = []
+    seen_ids = {strain_id}
+
+    if parent_links:
+        parent_ids = [l.parent_id for l in parent_links]
+        sib_result = await db.execute(
+            select(StrainLink).where(
+                StrainLink.parent_id.in_(parent_ids),
+                StrainLink.child_id != strain_id,
+            ).limit(60)
+        )
+        sib_links = sib_result.scalars().all()
+        if sib_links:
+            sib_ids = []
+            for l in sib_links:
+                if l.child_id not in seen_ids:
+                    seen_ids.add(l.child_id)
+                    sib_ids.append(l.child_id)
+            if sib_ids:
+                sib_strains = (await db.execute(
+                    select(Strain).where(Strain.id.in_(sib_ids[:24]))
+                )).scalars().all()
+                by_id = {s.id: s for s in sib_strains}
+                # Order by how many parents they share
+                from collections import Counter
+                shared_count = {}
+                for l in sib_links:
+                    if l.child_id in by_id:
+                        shared_count[l.child_id] = shared_count.get(l.child_id, 0) + 1
+                similar = sorted(by_id.values(), key=lambda s: -shared_count.get(s.id, 0))[:4]
+
+    # 2. Fill with same-breeder top-rated
+    if len(similar) < 4 and strain.breeder:
+        fill = (await db.execute(
+            select(Strain).where(
+                (Strain.breeder == strain.breeder) & (~Strain.id.in_(seen_ids))
+            ).order_by(Strain.rating.desc()).limit(4 - len(similar))
+        )).scalars().all()
+        for s in fill:
+            if s.id not in seen_ids:
+                seen_ids.add(s.id)
+                similar.append(s)
+
+    # 3. Final fill: same type, decent rating
+    if len(similar) < 4 and strain.strain_type:
+        fill = (await db.execute(
+            select(Strain).where(
+                (Strain.strain_type == strain.strain_type)
+                & (~Strain.id.in_(seen_ids))
+                & (Strain.image_url != "")
+            ).order_by(Strain.rating.desc()).limit(4 - len(similar))
+        )).scalars().all()
+        for s in fill:
+            similar.append(s)
+
+    if similar:
+        cards = ""
+        for s in similar[:4]:
+            img_html = (f'<img src="{s.image_url}" class="w-full aspect-square object-cover rounded-lg" loading="lazy">'
+                        if s.image_url else f'<div class="w-full aspect-square bg-elevated rounded-lg flex items-center justify-center text-4xl">{s.type_emoji}</div>')
+            if parent_links and any(l.parent_id for l in parent_links) and s.breeder != strain.breeder:
+                why = "🧬 shared genetics"
+            elif s.breeder == strain.breeder:
+                why = "👨‍🌾 same breeder"
+            else:
+                why = "similar profile"
+            cards += f"""<a href="/strains/{s.slug or s.id}" class="strain-card">
+                <div class="p-3">
+                    <div class="mb-2">{img_html}</div>
+                    <h4 class="text-sm font-semibold group-hover:text-weed-400 transition">{s.name}</h4>
+                    <div class="text-xs text-neutral-500 mt-0.5">{s.strain_type.title()} · {s.thc_display}</div>
+                    <div class="text-[10px] text-neutral-600 mt-1">{why}</div>
+                </div>
+            </a>"""
+        similar_html = f"""<div class="mb-8">
+            <h2 class="section-title">✨ Similar Strains</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">{cards}</div>
+        </div>"""
+
     # ── Type badge + colors ──
     type_colors = {"indica": ("bg-indica", "text-indigo-300", "Indica"),
                    "sativa": ("bg-sativa", "text-orange-300", "Sativa"),
@@ -763,6 +843,9 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
 
     <!-- Lineage -->
     {lineage_html}
+
+    <!-- Similar Strains -->
+    {similar_html if similar else ''}
 
     <!-- Reviews -->
     <div class="mb-6 flex items-center justify-between">

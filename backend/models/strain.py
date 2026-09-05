@@ -1,7 +1,7 @@
 """Strain model — cannabis strain catalog."""
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Float, Integer, Text, DateTime, func
+from sqlalchemy import String, Float, Integer, Text, DateTime, Boolean, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.database import Base
 
@@ -55,6 +55,9 @@ class Strain(Base):
 
     # SEO-friendly URL slug (e.g. "blue-dream")
     slug: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
+
+    # Admin-curated homepage feature
+    is_featured: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

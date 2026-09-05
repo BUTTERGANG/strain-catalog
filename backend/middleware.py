@@ -48,11 +48,17 @@ class SessionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         token = request.cookies.get("session")
         user_id = None
+        is_admin = False
         if token:
             # One short DB session just for the auth lookup
             async with async_session() as db:
                 user_id = await get_session_user_id(db, token)
+                if user_id:
+                    from backend.models.user import User
+                    user = await db.get(User, user_id)
+                    is_admin = bool(user and user.is_admin)
         request.state.user_id = user_id
+        request.state.is_admin = is_admin
         request.state.session_token = token
         response = await call_next(request)
         return response

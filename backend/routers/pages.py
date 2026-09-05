@@ -72,19 +72,10 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
     if not reviews_html:
         reviews_html = '<p class="text-sm text-neutral-500 italic text-center py-8">No reviews yet.</p>'
 
-    nav = f"""<nav class="nav-glass px-4 py-3">
-        <div class="max-w-6xl mx-auto flex items-center justify-between">
-            <a href="/" class="text-2xl font-display text-weed-400">🌿 WEED</a>
-            <div class="flex items-center gap-4 text-sm">
-                <a href="/strains" class="text-neutral-300 hover:text-white transition">Strains</a>
-                <a href="/dispensaries" class="text-neutral-300 hover:text-white transition">Dispensaries</a>
-                <a href="/map" class="text-neutral-300 hover:text-white transition">Map</a>
-                <a href="/seeds" class="text-neutral-300 hover:text-white transition">🌱 Seeds</a>
-                {'' if is_logged_in else '<a href="/auth/login" class="text-weed-400 hover:underline">Sign In</a>'}
-                {f'<a href="/auth/logout" class="text-neutral-400 hover:text-white transition">Logout</a>' if is_logged_in else '<a href="/auth/register" class="btn btn-primary">Join</a>'}
-            </div>
-        </div>
-    </nav>"""
+    # Homepage keeps its own DOCTYPE wrapper (extra head assets: leaflet),
+    # but pulls the shared nav from templates.
+    from backend.templates import build_nav
+    nav = build_nav(request)
     html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>WEED — Strain Catalog &amp; Dispensary Finder</title>
     <link rel="stylesheet" href="/static/css/app.css">
@@ -207,19 +198,10 @@ async def landrace_page(request: Request, db: AsyncSession = Depends(get_db)):
     if not cards_html:
         cards_html = '<div class="col-span-full text-center py-12"><p class="text-5xl mb-4 opacity-40">🌱</p><p class="text-xl text-amber-400">Landrace Strains</p><p class="text-sm text-neutral-500 mt-2">The original, native cannabis varieties from specific regions around the world.</p><p class="text-xs mt-4 text-neutral-600">Building our landrace catalog — checking back as we enrich more strains.</p></div>'
 
-    nav = f"""<nav class="nav-glass px-4 py-3">
-        <div class="max-w-6xl mx-auto flex items-center justify-between">
-            <a href="/" class="text-2xl font-display text-weed-400">🌿 WEED</a>
-            <div class="flex items-center gap-4 text-sm">
-                <a href="/strains" class="text-neutral-300 hover:text-white transition">Strains</a>
-                <a href="/dispensaries" class="text-neutral-300 hover:text-white transition">Dispensaries</a>
-                <a href="/map" class="text-neutral-300 hover:text-white transition">Map</a>
-                <a href="/seeds" class="text-neutral-300 hover:text-white transition">🌱 Seeds</a>
-                {'' if is_logged_in else '<a href="/auth/login" class="text-weed-400 hover:underline">Sign In</a>'}
-                {f'<a href="/auth/logout" class="text-neutral-400 hover:text-white transition">Logout</a>' if is_logged_in else '<a href="/auth/register" class="btn btn-primary">Join</a>'}
-            </div>
-        </div>
-    </nav>"""
+    # Homepage keeps its own DOCTYPE wrapper (extra head assets: leaflet),
+    # but pulls the shared nav from templates.
+    from backend.templates import build_nav
+    nav = build_nav(request)
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Landrace Strains — WEED Seeds</title><link rel="stylesheet" href="/static/css/app.css">
     </head><body class="min-h-screen">
@@ -247,19 +229,10 @@ async def landrace_page(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/map", response_class=HTMLResponse)
 async def map_page(request: Request):
     is_logged_in = request.state.user_id is not None
-    nav = f"""<nav class="nav-glass px-4 py-3">
-        <div class="max-w-6xl mx-auto flex items-center justify-between">
-            <a href="/" class="text-2xl font-display text-weed-400">🌿 WEED</a>
-            <div class="flex items-center gap-4 text-sm">
-                <a href="/strains" class="text-neutral-300 hover:text-white transition">Strains</a>
-                <a href="/dispensaries" class="text-neutral-300 hover:text-white transition">Dispensaries</a>
-                <a href="/map" class="text-neutral-300 hover:text-white transition">Map</a>
-                <a href="/seeds" class="text-neutral-300 hover:text-white transition">🌱 Seeds</a>
-                {'' if is_logged_in else '<a href="/auth/login" class="text-weed-400 hover:underline">Sign In</a>'}
-                {f'<a href="/auth/logout" class="text-neutral-400 hover:text-white transition">Logout</a>' if is_logged_in else '<a href="/auth/register" class="btn btn-primary">Join</a>'}
-            </div>
-        </div>
-    </nav>"""
+    # Homepage keeps its own DOCTYPE wrapper (extra head assets: leaflet),
+    # but pulls the shared nav from templates.
+    from backend.templates import build_nav
+    nav = build_nav(request)
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Dispensary Map — WEED</title>
     <link rel="stylesheet" href="/static/css/app.css">

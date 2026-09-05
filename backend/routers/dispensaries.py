@@ -171,7 +171,10 @@ async def dispensary_detail(dispensary_id: str, request: Request, db: AsyncSessi
             {f'<div id="map" class="h-48 rounded-xl mt-4" data-lat="{dispo.lat}" data-lon="{dispo.lon}"></div>' if dispo.lat and dispo.lon else ''}
         </div>
         <div class="md:w-2/3">
-            <h2 class="text-lg font-semibold text-neutral-200 mb-4">📋 Menu</h2>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-neutral-200 mb-0">📋 Menu</h2>
+                {f'<a href="/visits/add/{dispo.id}" class="btn btn-primary text-sm">📍 Log Visit</a>' if is_logged_in else ''}
+            </div>
             {menu_html}
         </div>
     </div>
