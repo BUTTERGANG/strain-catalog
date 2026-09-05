@@ -325,13 +325,20 @@ async def strain_compare(
 
     strains = []
     for sid in strain_ids:
-        result = await db.execute(select(Strain).where(Strain.id == sid))
+        result = await db.execute(select(Strain).where((Strain.id == sid) | (Strain.slug == sid)))
         s = result.scalar_one_or_none()
         if s:
             strains.append(s)
 
     if len(strains) < 2:
-        return HTMLResponse("Need at least 2 strains to compare", status_code=400)
+        # Some IDs were unknown — show the empty state with guidance instead of a bare 400
+        return render_page("""<div class="text-center py-12">
+            <p class="text-4xl mb-4">🔬</p>
+            <h1 class="text-2xl font-display text-weed-400 mb-2">Strain Comparison</h1>
+            <p class="text-neutral-500 mb-4">Couldn't find at least 2 valid strains in that selection.</p>
+            <p class="text-sm text-neutral-600 mb-6">Browse strains and check the "Compare" box on each card, then hit Compare.</p>
+            <a href="/strains" class="btn btn-primary">Browse Strains</a>
+        </div>""", "Compare — WEED", request=request)
 
     # Build comparison table
     def terp_str(s):
@@ -659,21 +666,23 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
         </div></div>'''
 
     # ── Reviews ──
+    from backend.services.escape import esc
     reviews_html = ""
     for r in reviews:
         reviews_html += f"""<div class="bg-elevated border rounded-xl p-4">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium">{r.user.display_name if r.user else 'Anonymous'}</span>
+                    <span class="text-sm font-medium">{esc(r.user.display_name if r.user and r.user.display_name else (r.user.username if r.user else 'Anonymous'))}</span>
                     <span class="text-yellow-500">{'★' * r.rating}{'☆' * (5 - r.rating)}</span>
                 </div>
                 <span class="text-xs text-neutral-500">{r.created_at.strftime('%b %d, %Y') if r.created_at else ''}</span>
             </div>
-            {f'<p class="text-sm text-neutral-300 mb-1"><strong>Aroma:</strong> {r.aroma}</p>' if r.aroma else ''}
-            {f'<p class="text-sm text-neutral-300 mb-1"><strong>Flavor:</strong> {r.flavor}</p>' if r.flavor else ''}
-            {f'<p class="text-sm text-neutral-300 mb-1"><strong>Effect:</strong> {r.effect}</p>' if r.effect else ''}
-            <p class="text-sm text-neutral-400">{r.notes}</p>
-            {f'<p class="text-xs text-neutral-500 mt-2">💨 {r.consumption_method}{f" · 💰 ${r.price_paid}" if r.price_paid else ""}</p>' if r.consumption_method else ''}
+            {f'<p class="text-sm text-neutral-300 mb-1"><strong>Aroma:</strong> {esc(r.aroma)}</p>' if r.aroma else ''}
+            {f'<p class="text-sm text-neutral-300 mb-1"><strong>Flavor:</strong> {esc(r.flavor)}</p>' if r.flavor else ''}
+            {f'<p class="text-sm text-neutral-300 mb-1"><strong>Effect:</strong> {esc(r.effect)}</p>' if r.effect else ''}
+            {f'<p class="text-sm text-neutral-300 mb-1"><strong>Appearance:</strong> {esc(r.appearance)}</p>' if r.appearance else ''}
+            <p class="text-sm text-neutral-400">{esc(r.notes)}</p>
+            {f'<p class="text-xs text-neutral-500 mt-2">💨 {esc(r.consumption_method)}{f" · 💰 ${r.price_paid}" if r.price_paid else ""}</p>' if r.consumption_method else ''}
         </div>"""
     if not reviews_html:
         reviews_html = '<p class="text-neutral-500 text-sm italic text-center py-8">No reviews yet.</p>'

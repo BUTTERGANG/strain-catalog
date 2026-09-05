@@ -13,6 +13,7 @@ from backend.models.session import PasswordReset
 from backend.models.wishlist import WishlistItem, DispensaryVisit
 from backend.models.review import Review
 from backend.services.auth import hash_password
+from backend.services.escape import esc
 from backend.middleware import enforce_rate_limit
 from backend.services.email import send_password_reset
 from backend.config import settings
@@ -83,11 +84,11 @@ async def profile_page(request: Request, db: AsyncSession = Depends(get_db)):
     for r in reviews:
         reviews_html += f"""<div class="bg-elevated border rounded-xl p-4">
             <div class="flex items-center justify-between mb-1">
-                <a href="/strains/{r.strain.id}" class="font-medium text-sm hover:text-weed-400">{r.strain.name}</a>
+                <a href="/strains/{r.strain.id}" class="font-medium text-sm hover:text-weed-400">{esc(r.strain.name)}</a>
                 <span class="text-yellow-500 text-xs">{'★' * r.rating}</span>
             </div>
-            <p class="text-xs text-neutral-400">{r.consumption_method or ""}</p>
-            {f'<p class="text-sm text-neutral-300 mt-1">{r.notes[:200]}</p>' if r.notes else ''}
+            <p class="text-xs text-neutral-400">by {esc(r.user.display_name if r.user and r.user.display_name else (r.user.username if r.user else 'someone'))} · {esc(r.consumption_method)}</p>
+            {f'<p class="text-sm text-neutral-300 mt-1">{esc(r.notes[:200])}</p>' if r.notes else ''}
         </div>"""
     if not reviews_html:
         reviews_html = '<p class="text-sm text-neutral-500 italic">No reviews yet.</p>'
@@ -104,7 +105,7 @@ async def profile_page(request: Request, db: AsyncSession = Depends(get_db)):
                 </div>
                 {f'<span class="text-xs text-neutral-500">{v.visit_date.strftime("%b %d, %Y") if v.visit_date else ""}</span>' if v.visit_date else ''}
             </div>
-            {f'<p class="text-sm text-neutral-300 mt-2">{v.notes}</p>' if v.notes else ''}
+            {f'<p class="text-sm text-neutral-300 mt-2">{esc(v.notes)}</p>' if v.notes else ''}
         </div>"""
     if not visits_html:
         visits_html = '<p class="text-sm text-neutral-500 italic">No dispensary visits logged yet.</p>'

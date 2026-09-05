@@ -59,15 +59,16 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
         </a>"""
 
     # Reviews HTML
+    from backend.services.escape import esc
     reviews_html = ""
     for r in recent_reviews:
         reviews_html += f"""<div class="bg-elevated border rounded-xl p-4">
             <div class="flex items-center justify-between mb-1">
-                <a href="/strains/{r.strain.id}" class="font-medium text-sm hover:text-weed-400 transition">{r.strain.name}</a>
+                <a href="/strains/{r.strain.id}" class="font-medium text-sm hover:text-weed-400 transition">{esc(r.strain.name)}</a>
                 <span class="text-yellow-500 text-xs">{'★' * r.rating}</span>
             </div>
-            <p class="text-xs text-neutral-400">by {r.user.display_name if r.user else 'someone'} · {r.consumption_method}</p>
-            {f'<p class="text-sm text-neutral-300 mt-1 line-clamp-2">{r.notes[:120]}{"…" if len(r.notes)>120 else ""}</p>' if r.notes else ''}
+            <p class="text-xs text-neutral-400">by {esc(r.user.display_name if r.user and r.user.display_name else (r.user.username if r.user else 'someone'))} · {esc(r.consumption_method)}</p>
+            {f'<p class="text-sm text-neutral-300 mt-1 line-clamp-2">{esc(r.notes[:120])}{"…" if len(r.notes)>120 else ""}</p>' if r.notes else ''}
         </div>"""
     if not reviews_html:
         reviews_html = '<p class="text-sm text-neutral-500 italic text-center py-8">No reviews yet.</p>'
