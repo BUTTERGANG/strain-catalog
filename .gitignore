@@ -36,3 +36,5 @@ Thumbs.db
 .replit-python
 .pythonlibs
 .last_promptdata/seedfinder.db
+
+data/seedfinder.db
