@@ -70,7 +70,7 @@ async def upload_strain_photo(strain_id: str, photo: UploadFile = File(...)):
 
 
 # Import and register routers
-from backend.routers import strains, dispensaries, reviews, auth, pages, profile, breeders, browse, visits, admin
+from backend.routers import strains, dispensaries, reviews, auth, pages, profile, breeders, browse, visits, admin, suggestions
 app.include_router(auth.router)
 app.include_router(strains.router)
 app.include_router(dispensaries.router)
@@ -81,6 +81,7 @@ app.include_router(breeders.router)
 app.include_router(browse.router)
 app.include_router(visits.router)
 app.include_router(admin.router)
+app.include_router(suggestions.router)
 
 
 @app.get("/health")

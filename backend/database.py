@@ -26,7 +26,7 @@ async def get_db() -> AsyncSession:
 
 async def init_db():
     """Create all tables."""
-    from backend.models import strain, dispensary, review, user, wishlist, session  # noqa: F401
+    from backend.models import strain, dispensary, review, user, wishlist, session, suggestion  # noqa: F401
 
     async with engine.begin() as conn:
         if "sqlite" in settings.database_url:

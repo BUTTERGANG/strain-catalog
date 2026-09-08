@@ -659,10 +659,22 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
             <p class="text-xs text-neutral-500 mt-2">Lineage enrichment in progress — parents will appear here as we process genetic data.</p>
         </div></div>'''
     else:
+        suggest_block = ""
+        if is_logged_in:
+            suggest_block = f"""<details class="mt-4 text-left">
+                <summary class="text-xs text-weed-400 cursor-pointer hover:underline">🧬 Know the parents? Suggest genetics</summary>
+                <form method="post" action="/suggestions/genetics/{strain_id}" class="mt-3 flex flex-wrap gap-2 items-end">
+                    <input type="text" name="parent_1" placeholder="Parent 1" required class="w-36 text-sm">
+                    <input type="text" name="parent_2" placeholder="Parent 2 (optional)" class="w-36 text-sm">
+                    <input type="text" name="notes" placeholder="Source (optional)" class="w-36 text-sm">
+                    <button type="submit" class="btn btn-primary text-xs">Submit</button>
+                </form>
+            </details>"""
         lineage_html = f'''<div class="mb-8"><h2 class="section-title">🌳 Genetic Lineage</h2>
         <div class="bg-elevated border rounded-xl p-6 text-center">
             <div class="text-3xl mb-2 opacity-40">🧬</div>
             <p class="text-sm text-neutral-500">Genetic lineage data not yet available for this strain.</p>
+            {suggest_block}
         </div></div>'''
 
     # ── Reviews ──

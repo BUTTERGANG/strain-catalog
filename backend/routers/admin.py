@@ -55,6 +55,10 @@ async def admin_home(request: Request, db: AsyncSession = Depends(get_db)):
             <h3 class="font-semibold text-lg">👥 Users</h3>
             <p class="text-xs text-neutral-500 mt-1">Promote admins, deactivate accounts</p>
         </a>
+        <a href="/suggestions/admin" class="strain-card p-5">
+            <h3 class="font-semibold text-lg">🧬 Genetics Suggestions</h3>
+            <p class="text-xs text-neutral-500 mt-1">Review community lineage proposals</p>
+        </a>
     </div>
     """, "Admin — WEED", request=request)
 
