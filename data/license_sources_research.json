@@ -1,0 +1,66 @@
+{
+  "confirmed_working": {
+    "MA": {
+      "endpoint": "https://masscannabiscontrol.com/resource/l_licenses_all_details_public.csv",
+      "records": 963,
+      "fields": [
+        "BUSINESS_NAME",
+        "BUSINESS_EMAIL",
+        "BUSINESS_PHONE",
+        "BUSINESS_ADDRESS_1",
+        "BUSINESS_CITY",
+        "LICENSE_NUMBER",
+        "LICENSE_TYPE",
+        "status",
+        "app_type"
+      ],
+      "note": "Direct CSV, no auth. 15 CSVs total in their open data catalog (also sales data)."
+    },
+    "NY": {
+      "endpoint": "https://data.ny.gov/resource/jskf-tt3q.json?$limit=3000",
+      "records": 2974,
+      "fields": [
+        "license_number",
+        "license_type",
+        "license_status",
+        "entity_name",
+        "dba",
+        "address_line_1",
+        "city",
+        "zip",
+        "issued_date",
+        "expiration_date",
+        "see_category (MBE/WBE flags)"
+      ],
+      "note": "Socrata API, real-time. Types include retail, cultivator, processor, distributor, microbusiness."
+    },
+    "CO": {
+      "endpoint": "https://docs.google.com/spreadsheets/d/170ZEhmBncg8SSIu-uB50wS5-tylgG7p0fRTB1mZhaTU/export?format=csv",
+      "records": 183,
+      "fields": [
+        "License Number",
+        "Facility Name",
+        "DBA",
+        "Facility Type",
+        "Street",
+        "City",
+        "ZIP",
+        "Expiration"
+      ],
+      "note": "Cultivations sheet (MED). Also retail/other sheets exist on the MED licensee page."
+    }
+  },
+  "blocked_or_js": {
+    "CA": "DCC search tool is a JS app; data.ca.gov has no DCC bulk dataset indexed",
+    "MI": "michigan.gov 403 (CF); download requires form POST",
+    "OR": "OLCC dataset ID guess failed",
+    "NV": "ArcGIS 403",
+    "strain-database.com": "Cloudflare managed turnstile (unrelated to licenses but same blocker)"
+  },
+  "notes": [
+    "MA + NY + CO = ~4,100 license records immediately ingestable",
+    "NY license types directly map to our needs: cultivator/processor/distributor/dispensary",
+    "MA has EIN + owner contact info",
+    "Apify has a 'Cannabis License National Aggregator' scraper (paid) that aggregates many states \u2014 fallback for CA/MI"
+  ]
+}

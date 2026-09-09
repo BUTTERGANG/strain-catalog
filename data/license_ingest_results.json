@@ -1,0 +1,29 @@
+{
+  "MA": {
+    "state": "MA",
+    "in": 949,
+    "inserted": 574,
+    "updated": 0,
+    "skipped": 375,
+    "total_records": 674,
+    "with_license": 574
+  },
+  "NY": {
+    "state": "NY",
+    "in": 2479,
+    "inserted": 1849,
+    "updated": 0,
+    "skipped": 630,
+    "total_records": 2523,
+    "with_license": 2423
+  },
+  "CO": {
+    "state": "CO",
+    "in": 183,
+    "inserted": 183,
+    "updated": 0,
+    "skipped": 0,
+    "total_records": 2706,
+    "with_license": 2606
+  }
+}
