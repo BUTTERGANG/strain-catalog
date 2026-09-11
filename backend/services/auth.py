@@ -51,7 +51,7 @@ async def get_session_user_id(db: AsyncSession, token: str | None) -> str | None
     )).scalar_one_or_none()
     if not row:
         return None
-    if row.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+    if row.expires_at < datetime.now(timezone.utc):
         await db.delete(row)
         await db.commit()
         return None

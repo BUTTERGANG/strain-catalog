@@ -76,7 +76,12 @@ async def dispensary_list(
         </a>"""
 
     if not cards_html:
-        cards_html = '<div class="col-span-full text-center py-12 text-neutral-500"><p class="text-4xl mb-2">🏪</p><p>No dispensaries found yet.</p><p class="text-sm mt-2">We have 100 dispensaries in the database — check your filters.</p></div>'
+        if total == 0 and not (state or city or search):
+            empty_detail = "No dispensaries in the database yet."
+        else:
+            unfiltered_total = (await db.execute(select(func.count()).select_from(Dispensary))).scalar() or 0
+            empty_detail = f"We have {unfiltered_total} dispensaries in the database — check your filters."
+        cards_html = f'<div class="col-span-full text-center py-12 text-neutral-500"><p class="text-4xl mb-2">🏪</p><p>No dispensaries found yet.</p><p class="text-sm mt-2">{empty_detail}</p></div>'
 
     html = render_page(f"""<div class="mb-6">
         <h1 class="text-3xl font-display text-weed-400">🏪 Dispensaries</h1>

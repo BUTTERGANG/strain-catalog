@@ -10,15 +10,15 @@ from backend.services.auth import (
 )
 from backend.middleware import enforce_rate_limit
 from backend.config import settings
-from backend.templates import render_page
+from backend.templates import render_page, LOGO_SVG
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    return render_page("""<div class="max-w-sm w-full mx-auto my-16">
-        <div class="text-center mb-8"><h1 class="text-4xl font-display text-weed-400">🌿 WEED</h1><p class="text-neutral-400 mt-2">Strain Catalog &amp; Dispensary Finder</p></div>
+    return render_page(f"""<div class="max-w-sm w-full mx-auto my-16">
+        <div class="text-center mb-8"><h1 class="text-4xl font-display text-weed-400" style="display:inline-flex;align-items:center;gap:10px;justify-content:center;">{LOGO_SVG} WEED</h1><p class="text-neutral-400 mt-2">Strain Catalog &amp; Dispensary Finder</p></div>
         <div class="bg-elevated rounded-xl p-6 border border-glass">
         <h2 class="text-lg font-semibold mb-4">Sign In</h2>
         <form method="post" action="/auth/login">
@@ -27,7 +27,7 @@ async def login_page(request: Request):
         <button type="submit" class="btn btn-primary w-full">Sign In</button>
         </form>
         <p class="text-center text-sm text-neutral-500 mt-4">No account? <a href="/auth/register" class="text-weed-400 hover:underline">Register</a></p>
-        <p class="text-center text-xs text-neutral-600 mt-2"><a href="/profile/forgot-password" class="hover:text-weed-400 transition">Forgot password?</a></p>
+        <p class="text-center text-xs text-neutral-600 mt-2"><a href="/profile/forgot-password" class="text-neutral-600 hover:text-weed-400 transition">Forgot password?</a></p>
         </div></div>""", "Sign In — WEED", request=request)
 
 
@@ -57,8 +57,8 @@ async def login(
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
-    return render_page("""<div class="max-w-sm w-full mx-auto my-16">
-        <div class="text-center mb-8"><h1 class="text-4xl font-display text-weed-400">🌿 WEED</h1><p class="text-neutral-400 mt-2">Join the community</p></div>
+    return render_page(f"""<div class="max-w-sm w-full mx-auto my-16">
+        <div class="text-center mb-8"><h1 class="text-4xl font-display text-weed-400" style="display:inline-flex;align-items:center;gap:10px;justify-content:center;">{LOGO_SVG} WEED</h1><p class="text-neutral-400 mt-2">Join the community</p></div>
         <div class="bg-elevated rounded-xl p-6 border border-glass">
         <h2 class="text-lg font-semibold mb-4">Create Account</h2>
         <form method="post" action="/auth/register">

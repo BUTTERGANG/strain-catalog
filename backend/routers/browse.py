@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db, async_session
 from backend.models.strain import Strain
 from sqlalchemy import select
-from backend.templates import render_page
+from backend.templates import render_page, strain_image_html
 
 router = APIRouter(prefix="/browse", tags=["browse"])
 
@@ -18,7 +18,7 @@ EFFECT_META = {
     "creative": ("🎨", "Ideas flow, music sounds better, projects get started."),
     "energetic": ("⚡", "Get-up-and-go — chores, hikes, daylight strains."),
     "focused": ("🎯", "Locked-in, task-oriented clarity."),
-    "hungry": (" munchies", "Appetite on full — medical use for nausea/eating."),
+    "hungry": ("🍕", "Appetite on full — medical use for nausea/eating."),
     "sleepy": ("😴", "Heavy lids, nightcap strains, insomnia relief."),
     "aroused": ("🔥", "Warming, sensual, date-night territory."),
     "talkative": ("💬", "Chatty, social-lubricant mode."),
@@ -71,6 +71,8 @@ async def effects_index(request: Request, db: AsyncSession = Depends(get_db)):
             <h3 class="font-semibold group-hover:text-weed-400 transition capitalize">{name}</h3>
             <p class="text-xs text-neutral-500 mt-1">{n:,} strains{f' · {desc}' if desc else ''}</p>
         </a>"""
+    if not cards:
+        cards = '<div class="col-span-full text-center py-12 text-neutral-500"><p class="text-4xl mb-2 opacity-40">⚡</p><p>No effect data yet.</p><p class="text-sm mt-2">Effects show up here once strains are enriched with effect tags.</p></div>'
     return render_page(f"""<div class="mb-6">
         <h1 class="text-3xl font-display text-weed-400">⚡ Browse by Effect</h1>
         <p class="text-neutral-400 mt-1">What are you looking for today?</p>
@@ -103,6 +105,8 @@ async def terpenes_index(request: Request, db: AsyncSession = Depends(get_db)):
             <p class="text-xs text-neutral-500 mt-1">{n:,} strains profiled</p>
             <p class="text-xs text-neutral-600 mt-1">{desc}</p>
         </a>"""
+    if not cards:
+        cards = '<div class="col-span-full text-center py-12 text-neutral-500"><p class="text-4xl mb-2 opacity-40">🧪</p><p>No terpene data yet.</p><p class="text-sm mt-2">Terpene profiles show up here once strains are enriched with lab data.</p></div>'
     return render_page(f"""<div class="mb-6">
         <h1 class="text-3xl font-display text-weed-400">🧪 Terpenes</h1>
         <p class="text-neutral-400 mt-1">The aromatic compounds driving each strain's character</p>
@@ -137,7 +141,11 @@ async def effect_page(effect_slug: str, request: Request, page: int = Query(1, g
     for r in rows:
         rid, slug, name, stype, tmin, tmax, img, rating = r
         thc = f"{tmin}%-{tmax}%" if (tmin and tmax) else (f"{tmin}%+" if tmin else "—")
-        image_html = f'<img src="{img}" class="strain-card-image w-full" loading="lazy">' if img else f'<div class="strain-card-image">{ {"indica":"🔵","sativa":"🟠","hybrid":"🟣"}.get(stype, "🟢") }</div>'
+        image_html = strain_image_html(
+            img, name, "strain-card-image w-full",
+            {"indica": "🔵", "sativa": "🟠", "hybrid": "🟣"}.get(stype, "🟢"),
+            fallback_class="strain-card-image",
+        )
         cards += f"""<a href="/strains/{slug or rid}" class="strain-card strain-card-{stype}">
             {image_html}
             <div class="p-4">
@@ -197,7 +205,11 @@ async def terpene_page(terp_slug: str, request: Request, page: int = Query(1, ge
                     break
         except Exception:
             pass
-        image_html = f'<img src="{img}" class="strain-card-image w-full" loading="lazy">' if img else f'<div class="strain-card-image">{ {"indica":"🔵","sativa":"🟠","hybrid":"🟣"}.get(stype, "🟢") }</div>'
+        image_html = strain_image_html(
+            img, name, "strain-card-image w-full",
+            {"indica": "🔵", "sativa": "🟠", "hybrid": "🟣"}.get(stype, "🟢"),
+            fallback_class="strain-card-image",
+        )
         cards += f"""<a href="/strains/{slug or rid}" class="strain-card strain-card-{stype}">
             {image_html}
             <div class="p-4">

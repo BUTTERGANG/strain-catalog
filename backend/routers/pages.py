@@ -10,7 +10,7 @@ from backend.models.review import Review
 from backend.models.user import User
 from backend.models.dispensary import Dispensary
 from backend.config import settings
-from backend.templates import render_page
+from backend.templates import render_page, strain_image_html, FAVICON_LINK
 
 router = APIRouter(tags=["pages"])
 
@@ -44,11 +44,11 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
     # Featured cards — image-first
     featured_cards = ""
     for s in featured_strains:
-        img = s.image_url
-        if img:
-            image_html = f'<img src="{img}" alt="{s.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">'
-        else:
-            image_html = f'<div class="w-full h-full flex items-center justify-center text-4xl">{s.type_emoji}</div>'
+        image_html = strain_image_html(
+            s.image_url, s.name,
+            "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500",
+            s.type_emoji, fallback_class="w-full h-full flex items-center justify-center text-4xl",
+        )
         featured_cards += f"""<a href="/strains/{s.id}" class="strain-card strain-card-{s.strain_type if s.strain_type in ('indica','sativa','hybrid') else 'hybrid'}">
             <div class="aspect-4/3 overflow-hidden">{image_html}</div>
             <div class="p-3">
@@ -78,7 +78,7 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
     from backend.templates import build_nav
     nav = build_nav(request)
     html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>WEED — Strain Catalog &amp; Dispensary Finder</title>
+    <title>WEED — Strain Catalog &amp; Dispensary Finder</title>{FAVICON_LINK}
     <link rel="stylesheet" href="/static/css/app.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -91,9 +91,9 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
     <!-- Hero -->
     <div class="bg-gradient-hero border-b border-glass">
         <div class="max-w-6xl mx-auto px-4 py-16 md:py-24 text-center">
-            <div class="text-8xl mb-4">🌿</div>
-            <h1 class="text-5xl md:text-7xl font-display text-weed-400 mb-4">WEED</h1>
-            <p class="text-lg md:text-xl text-neutral-400 mb-8 max-w-2xl mx-auto">Strain Catalog · Dispensary Finder · Community Reviews</p>
+            <div class="text-xs" style="font-family:'JetBrains Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:20px;">Strain Catalog · Dispensary Finder · Community Reviews</div>
+            <h1 class="text-5xl md:text-7xl font-display text-white mb-4">Know your green,<br>down to the terpene.</h1>
+            <p class="text-lg md:text-xl text-neutral-400 mb-8 max-w-2xl mx-auto">{strain_count} strains cross-referenced by genetics, terpene profile, and grower data — plus the dispensaries carrying them near you.</p>
             <div class="flex justify-center gap-3">
                 <a href="/strains" class="btn btn-primary text-base px-8 py-3">Browse Strains</a>
                 <a href="/dispensaries" class="btn btn-secondary text-base px-8 py-3">Find Dispensaries</a>
@@ -102,7 +102,7 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
     </div>
 
     <!-- Live Stats -->
-    <div class="max-w-6xl mx-auto px-4 -mt-8">
+    <div class="max-w-6xl mx-auto px-4 mt-10">
         <div id="live-stats" class="skeleton h-20 rounded-xl"></div>
         <script>fetch('/api/stats').then(r=>r.text()).then(h=>document.getElementById('live-stats').outerHTML=h)</script>
     </div>
@@ -127,7 +127,7 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
 
     <!-- Top Rated -->
     <div class="max-w-6xl mx-auto px-4 py-8">
-        <h2 class="section-title">🏆 Top Rated Strains</h2>
+        <h2 class="section-title">Top rated this month</h2>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">{featured_cards}</div>
     </div>
 
@@ -135,11 +135,11 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
     <div class="max-w-6xl mx-auto px-4 py-8">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-                <h2 class="section-title">💬 Recent Reviews</h2>
+                <h2 class="section-title">Recent reviews</h2>
                 <div class="space-y-3">{reviews_html}</div>
             </div>
             <div>
-                <h2 class="section-title">🗺️ Dispensary Map</h2>
+                <h2 class="section-title">Dispensary map</h2>
                 <div id="home-map" class="h-64 bg-elevated rounded-xl border border-glass"></div>
             </div>
         </div>
@@ -181,11 +181,7 @@ async def landrace_page(request: Request, db: AsyncSession = Depends(get_db)):
 
     cards_html = ""
     for s in landraces:
-        img = s.image_url
-        if img:
-            img_html = f'<img src="{img}" alt="{s.name}" class="w-full h-full object-cover" loading="lazy">'
-        else:
-            img_html = f'<div class="w-full h-full flex items-center justify-center text-4xl">{s.type_emoji}</div>'
+        img_html = strain_image_html(s.image_url, s.name, "w-full h-full object-cover", s.type_emoji)
         origin_tag = f'<span class="text-xs text-amber-400">🌍 {s.landrace_origin}</span>' if s.landrace_origin else '<span class="text-xs text-amber-400">🌍 Landrace</span>'
         cards_html += f"""<a href="/strains/{s.id}" class="strain-card bg-gradient-landrace">
             <div class="aspect-4/3 overflow-hidden">{img_html}</div>
@@ -204,7 +200,7 @@ async def landrace_page(request: Request, db: AsyncSession = Depends(get_db)):
     from backend.templates import build_nav
     nav = build_nav(request)
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Landrace Strains — WEED Seeds</title><link rel="stylesheet" href="/static/css/app.css">
+    <title>Landrace Strains — WEED Seeds</title>{FAVICON_LINK}<link rel="stylesheet" href="/static/css/app.css">
     </head><body class="min-h-screen">
     {nav}
     <main class="max-w-6xl mx-auto px-4 py-8">
@@ -235,7 +231,7 @@ async def map_page(request: Request):
     from backend.templates import build_nav
     nav = build_nav(request)
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Dispensary Map — WEED</title>
+    <title>Dispensary Map — WEED</title>{FAVICON_LINK}
     <link rel="stylesheet" href="/static/css/app.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />

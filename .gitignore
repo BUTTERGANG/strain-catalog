@@ -35,6 +35,11 @@ Thumbs.db
 # Replit
 .replit-python
 .pythonlibs
-.last_promptdata/seedfinder.db
+.last_prompt
+
+# Claude Code (persisted on the repl volume; contains auth token — never commit)
+.claude/
+.claude.json
+.local/share/claude/
 
 data/seedfinder.db

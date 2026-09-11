@@ -6,7 +6,7 @@ from sqlalchemy import select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db, async_session
 from backend.models.strain import Strain
-from backend.templates import render_page
+from backend.templates import render_page, strain_image_html
 
 router = APIRouter(prefix="/breeders", tags=["breeders"])
 
@@ -20,8 +20,8 @@ async def breeder_index(request: Request, q: str = Query(""), db: AsyncSession =
     """Directory of all breeders with strain counts."""
     from sqlalchemy import text
     async with async_session() as db:
-        rows = (await db.execute(text("""
-            SELECT breeder, COUNT(*) as n, ROUND(AVG(rating),1) as avg_rating
+        raw_rows = (await db.execute(text("""
+            SELECT breeder, COUNT(*) as n, AVG(rating) as avg_rating
             FROM strains
             WHERE breeder IS NOT NULL AND breeder != ''
               AND breeder NOT IN ('Unknown or Legendary', 'Clone Only Strains', 'Unknown')
@@ -29,6 +29,9 @@ async def breeder_index(request: Request, q: str = Query(""), db: AsyncSession =
             ORDER BY n DESC
             LIMIT 500
         """))).fetchall()
+        # Round in Python — ROUND(double precision, int) isn't portable across
+        # Postgres (needs a ::numeric cast) and SQLite (doesn't support casts).
+        rows = [(b, n, round(avg, 1) if avg is not None else None) for b, n, avg in raw_rows]
 
     search = (q or "").lower()
     if search:
@@ -46,6 +49,8 @@ async def breeder_index(request: Request, q: str = Query(""), db: AsyncSession =
                 <span class="text-neutral-600">→</span>
             </div>
         </a>"""
+    if not cards:
+        cards = '<div class="col-span-full text-center py-12 text-neutral-500"><p class="text-4xl mb-2 opacity-40">👨‍🌾</p><p>No breeder data yet.</p><p class="text-sm mt-2">Breeders show up here once strains are enriched with breeder attribution.</p></div>'
 
     html = render_page(f"""<div class="mb-6">
         <h1 class="text-3xl font-display text-weed-400">👨‍🌾 Breeders</h1>
@@ -100,9 +105,9 @@ async def breeder_page(breeder_slug: str, request: Request, page: int = Query(1,
 
     cards = ""
     for s in strains:
-        img = s.image_url
-        image_html = (f'<img src="{img}" class="strain-card-image w-full" loading="lazy">'
-                      if img else f'<div class="strain-card-image">{s.type_emoji}</div>')
+        image_html = strain_image_html(
+            s.image_url, s.name, "strain-card-image w-full", s.type_emoji, fallback_class="strain-card-image",
+        )
         cards += f"""<a href="/strains/{s.slug or s.id}" class="strain-card strain-card-{s.strain_type}">
             {image_html}
             <div class="p-4">

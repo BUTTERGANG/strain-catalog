@@ -210,7 +210,7 @@ async def reset_password(request: Request, token: str = Form(...), password: str
         select(PasswordReset).where(PasswordReset.token_hash == _hash_token(token))
     )).scalar_one_or_none()
 
-    if not row or row.used_at is not None or row.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+    if not row or row.used_at is not None or row.expires_at < datetime.now(timezone.utc):
         return HTMLResponse("Invalid or expired reset token", status_code=400)
 
     user = await db.get(User, row.user_id)

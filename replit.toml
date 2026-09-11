@@ -1,5 +1,5 @@
 [env]
-PORT = "8003"
+PORT = "5000"
 
 [run]
 args = ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "$PORT"]

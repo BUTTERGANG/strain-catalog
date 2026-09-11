@@ -11,7 +11,10 @@ class Settings(BaseSettings):
     app_name: str = "WEED"
     debug: bool = False
     # Set SECRET_KEY in env for production — stable across restarts, required for signed values
-    secret_key: str = os.getenv("SECRET_KEY", "dev-only-insecure-key-change-me")
+    secret_key: str = os.getenv(
+        "SECRET_KEY",
+        os.getenv("SESSION_SECRET", "dev-only-insecure-key-change-me"),
+    )
 
     # Database — use Neon postgres if DATABASE_URL is set, else SQLite
     database_url: str = os.getenv(

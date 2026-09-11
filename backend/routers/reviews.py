@@ -1,12 +1,25 @@
 """Reviews router — create and list reviews."""
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.models.strain import Strain
 from backend.models.review import Review
 from backend.models.dispensary import Dispensary
+from backend.templates import LOGO_SVG, FAVICON_LINK
+
+
+async def _resync_strain_rating(strain_id: str, db: AsyncSession) -> None:
+    """Recompute rating/review_count from the live reviews table."""
+    avg_rating, count = (await db.execute(
+        select(func.avg(Review.rating), func.count(Review.id)).where(Review.strain_id == strain_id)
+    )).one()
+    strain = await db.get(Strain, strain_id)
+    if strain:
+        strain.rating = round(avg_rating, 1) if avg_rating is not None else 0.0
+        strain.review_count = count or 0
+        await db.commit()
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
@@ -30,11 +43,11 @@ async def add_review_page(strain_id: str, request: Request, db: AsyncSession = D
         dispo_options += f'<option value="{d.id}">{d.name} — {d.city}, {d.state}</option>'
 
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Review {strain.name} — WEED</title><link rel="stylesheet" href="/static/css/app.css"></head>
+    <title>Review {strain.name} — WEED</title>{FAVICON_LINK}<link rel="stylesheet" href="/static/css/app.css"></head>
     <body class="bg-black text-white min-h-screen">
     <nav class="bg-neutral-900 border-b border-neutral-800 px-4 py-3">
     <div class="max-w-6xl mx-auto flex items-center justify-between">
-        <a href="/" class="text-2xl font-display text-weed-400">🌿 WEED</a>
+        <a href="/" class="text-2xl font-display text-weed-400" style="display:inline-flex;align-items:center;gap:8px;">{LOGO_SVG} WEED</a>
         <div class="flex items-center gap-4 text-sm">
             <a href="/strains" class="text-neutral-300 hover:text-white transition">Strains</a>
             <a href="/dispensaries" class="text-neutral-300 hover:text-white transition">Dispensaries</a>
@@ -138,4 +151,5 @@ async def add_review(
     )
     db.add(review)
     await db.commit()
+    await _resync_strain_rating(strain_id, db)
     return RedirectResponse(url=f"/strains/{strain_id}", status_code=302)
