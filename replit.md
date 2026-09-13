@@ -3,6 +3,23 @@
 This project is a FastAPI web application using Replit PostgreSQL when
 `DATABASE_URL` is available and SQLite otherwise.
 
+## Database Architecture (Hub-and-Spoke)
+
+The VPS local SQLite (`data/weed.db`) is the **authoritative dataset** —
+all scraping, enrichment, and ingestion run there. The Neon Postgres that
+Replit connects to is an **additive consumer**: it receives pushes via
+`scripts/migrate_sqlite_to_pg.py` and never makes unilateral schema/data changes.
+
+To sync:
+
+```sh
+DATABASE_URL="postgresql://..." python scripts/migrate_sqlite_to_pg.py --all
+```
+
+Idempotent by primary key — safe to re-run. See the skill reference
+(`replit-setup` → `references/database-sync-pattern.md`) for the full pattern
+and when NOT to use it.
+
 ## Development
 
 The `Start application` workflow runs:
