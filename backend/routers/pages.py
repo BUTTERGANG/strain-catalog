@@ -11,6 +11,7 @@ from backend.models.user import User
 from backend.models.dispensary import Dispensary
 from backend.config import settings
 from backend.templates import render_page, strain_image_html, FAVICON_LINK
+from backend.services.escape import esc
 
 router = APIRouter(tags=["pages"])
 
@@ -52,14 +53,13 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
         featured_cards += f"""<a href="/strains/{s.id}" class="strain-card strain-card-{s.strain_type if s.strain_type in ('indica','sativa','hybrid') else 'hybrid'}">
             <div class="aspect-4/3 overflow-hidden">{image_html}</div>
             <div class="p-3">
-                <h3 class="font-semibold text-sm group-hover:text-weed-400 transition line-clamp-1">{s.name}</h3>
-                <div class="text-xs text-neutral-500">{s.strain_type.title()} · {s.thc_display}</div>
+                <h3 class="font-semibold text-sm group-hover:text-weed-400 transition line-clamp-1">{esc(s.name)}</h3>
+                <div class="text-xs text-neutral-500">{esc(s.strain_type.title())} · {s.thc_display}</div>
                 <span class="text-yellow-500 text-xs">{'★' * round(s.rating)}{'☆' * (5 - round(s.rating))}</span>
             </div>
         </a>"""
 
     # Reviews HTML
-    from backend.services.escape import esc
     reviews_html = ""
     for r in recent_reviews:
         reviews_html += f"""<div class="bg-elevated border rounded-xl p-4">
@@ -156,10 +156,15 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
         L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png').addTo(map);
         data.forEach(function(d) {{
             if (d.lat && d.lon) {{
-                L.marker([d.lat, d.lon]).addTo(map).bindPopup('<b>' + d.name + '</b><br>' + d.city + ', ' + d.state);
+                L.marker([d.lat, d.lon]).addTo(map).bindPopup('<b>' + escapeHtml(d.name) + '</b><br>' + escapeHtml(d.city) + ', ' + escapeHtml(d.state));
             }}
         }});
     }});
+    function escapeHtml(s) {{
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {{
+            return {{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c];
+        }});
+    }}
     </script>
     </body></html>"""
     return html
@@ -182,12 +187,12 @@ async def landrace_page(request: Request, db: AsyncSession = Depends(get_db)):
     cards_html = ""
     for s in landraces:
         img_html = strain_image_html(s.image_url, s.name, "w-full h-full object-cover", s.type_emoji)
-        origin_tag = f'<span class="text-xs text-amber-400">🌍 {s.landrace_origin}</span>' if s.landrace_origin else '<span class="text-xs text-amber-400">🌍 Landrace</span>'
+        origin_tag = f'<span class="text-xs text-amber-400">🌍 {esc(s.landrace_origin)}</span>' if s.landrace_origin else '<span class="text-xs text-amber-400">🌍 Landrace</span>'
         cards_html += f"""<a href="/strains/{s.id}" class="strain-card bg-gradient-landrace">
             <div class="aspect-4/3 overflow-hidden">{img_html}</div>
             <div class="p-4">
-                <h3 class="font-semibold group-hover:text-weed-400 transition">{s.name}</h3>
-                <div class="text-xs text-neutral-500">{s.strain_type.title()} · {s.thc_display}</div>
+                <h3 class="font-semibold group-hover:text-weed-400 transition">{esc(s.name)}</h3>
+                <div class="text-xs text-neutral-500">{esc(s.strain_type.title())} · {s.thc_display}</div>
                 <div class="mt-2">{origin_tag}</div>
             </div>
         </a>"""
@@ -248,12 +253,17 @@ async def map_page(request: Request):
     fetch('/api/dispensaries/map-data').then(r=>r.json()).then(function(data) {{
         data.forEach(function(d) {{
             if (d.lat && d.lon) {{
-                var m = L.marker([d.lat, d.lon]).bindPopup('<b>' + d.name + '</b><br>' + d.city + ', ' + d.state + '<br><a href="/dispensaries/' + d.id + '" class="text-weed-400 text-sm">View →</a>');
+                var m = L.marker([d.lat, d.lon]).bindPopup('<b>' + escapeHtml(d.name) + '</b><br>' + escapeHtml(d.city) + ', ' + escapeHtml(d.state) + '<br><a href="/dispensaries/' + encodeURIComponent(d.id) + '" class="text-weed-400 text-sm">View →</a>');
                 markers.addLayer(m);
             }}
         }});
         map.addLayer(markers);
     }});
+    function escapeHtml(s) {{
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {{
+            return {{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c];
+        }});
+    }}
     </script>
     </body></html>"""
     return html

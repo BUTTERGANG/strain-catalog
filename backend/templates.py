@@ -1,6 +1,7 @@
 """Shared HTML template helpers for WEED routers."""
 from urllib.parse import quote
 from fastapi import Request
+from backend.services.escape import esc
 
 # Single bold leaf mark, used for the nav logo and the favicon. Uses CSS custom
 # properties so it inherits the live theme in-page; the favicon (no CSS context)
@@ -26,7 +27,7 @@ def strain_image_html(url: str, alt: str, img_class: str, emoji: str, fallback_c
         return fallback
     escaped_fallback = fallback.replace('"', "&quot;").replace("'", "\\'")
     return (
-        f'<img src="{url}" alt="{alt}" class="{img_class}" loading="lazy" '
+        f'<img src="{esc(url)}" alt="{esc(alt)}" class="{img_class}" loading="lazy" '
         f'onerror="this.outerHTML=\'{escaped_fallback}\'">'
     )
 
@@ -68,6 +69,6 @@ def render_page(content: str, title: str = "WEED", request: Request = None) -> s
 
     return f"""<!DOCTYPE html><html lang="en"><head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>{title}</title>{FAVICON_LINK}<link rel="stylesheet" href="/static/css/app.css">
+    <title>{esc(title)}</title>{FAVICON_LINK}<link rel="stylesheet" href="/static/css/app.css">
     <style>.line-clamp-3{{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}}</style>
     </head><body class="min-h-screen">{nav}<main class="max-w-6xl mx-auto px-4 py-8">{content}</main></body></html>"""

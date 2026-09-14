@@ -8,6 +8,7 @@ from backend.database import get_db, async_session
 from backend.models.strain import Strain
 from sqlalchemy import select
 from backend.templates import render_page, strain_image_html
+from backend.services.escape import esc
 
 router = APIRouter(prefix="/browse", tags=["browse"])
 
@@ -68,7 +69,7 @@ async def effects_index(request: Request, db: AsyncSession = Depends(get_db)):
         emoji, desc = EFFECT_META.get(name.lower(), ("⚡", ""))
         cards += f"""<a href="/browse/effects/{_slugify(name)}" class="strain-card p-5">
             <div class="text-3xl mb-2">{emoji}</div>
-            <h3 class="font-semibold group-hover:text-weed-400 transition capitalize">{name}</h3>
+            <h3 class="font-semibold group-hover:text-weed-400 transition capitalize">{esc(name)}</h3>
             <p class="text-xs text-neutral-500 mt-1">{n:,} strains{f' · {desc}' if desc else ''}</p>
         </a>"""
     if not cards:
@@ -101,7 +102,7 @@ async def terpenes_index(request: Request, db: AsyncSession = Depends(get_db)):
         emoji, desc = TERP_META.get(name.lower(), ("🧪", ""))
         cards += f"""<a href="/browse/terpenes/{_slugify(name)}" class="strain-card p-5">
             <div class="text-3xl mb-2">{emoji}</div>
-            <h3 class="font-semibold group-hover:text-weed-400 transition capitalize">{name}</h3>
+            <h3 class="font-semibold group-hover:text-weed-400 transition capitalize">{esc(name)}</h3>
             <p class="text-xs text-neutral-500 mt-1">{n:,} strains profiled</p>
             <p class="text-xs text-neutral-600 mt-1">{desc}</p>
         </a>"""
@@ -149,8 +150,8 @@ async def effect_page(effect_slug: str, request: Request, page: int = Query(1, g
         cards += f"""<a href="/strains/{slug or rid}" class="strain-card strain-card-{stype}">
             {image_html}
             <div class="p-4">
-                <h3 class="font-semibold group-hover:text-weed-400 transition">{name}</h3>
-                <div class="text-xs text-neutral-500 mt-1">{stype.title()} · {f"{tmin}-{tmax}%" if (tmin and tmax) else (f"{tmin}%+" if tmin else "THC ?")}</div>
+                <h3 class="font-semibold group-hover:text-weed-400 transition">{esc(name)}</h3>
+                <div class="text-xs text-neutral-500 mt-1">{esc(stype.title())} · {f"{tmin}-{tmax}%" if (tmin and tmax) else (f"{tmin}%+" if tmin else "THC ?")}</div>
             </div>
         </a>"""
 
@@ -167,13 +168,13 @@ async def effect_page(effect_slug: str, request: Request, page: int = Query(1, g
 
     return render_page(f"""<div class="mb-6">
         <div class="text-5xl mb-2">{emoji}</div>
-        <h1 class="text-3xl font-display text-weed-400 capitalize">{effect_name}</h1>
+        <h1 class="text-3xl font-display text-weed-400 capitalize">{esc(effect_name)}</h1>
         <p class="text-neutral-400 mt-1">{total:,} strains{f' · {desc}' if desc else ''}</p>
         <a href="/browse/effects" class="text-xs text-neutral-500 hover:text-weed-400 mt-2 inline-block">← all effects</a>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{cards}</div>
     {pager}
-    """, f"{effect_name.title()} strains — WEED", request=request)
+    """, f"{esc(effect_name.title())} strains — WEED", request=request)
 
 
 @router.get("/terpenes/{terp_slug}", response_class=HTMLResponse)
@@ -213,9 +214,9 @@ async def terpene_page(terp_slug: str, request: Request, page: int = Query(1, ge
         cards += f"""<a href="/strains/{slug or rid}" class="strain-card strain-card-{stype}">
             {image_html}
             <div class="p-4">
-                <h3 class="font-semibold group-hover:text-weed-400 transition">{name}</h3>
-                <div class="text-xs text-weed-400 mt-1">🧪 {pct}{terp_name.title()}</div>
-                <div class="text-xs text-neutral-500 mt-1">{stype.title()} · {f"{tmin}-{tmax}%" if (tmin and tmax) else (f"{tmin}%+" if tmin else "THC ?")}</div>
+                <h3 class="font-semibold group-hover:text-weed-400 transition">{esc(name)}</h3>
+                <div class="text-xs text-weed-400 mt-1">🧪 {esc(pct)}{esc(terp_name.title())}</div>
+                <div class="text-xs text-neutral-500 mt-1">{esc(stype.title())} · {f"{tmin}-{tmax}%" if (tmin and tmax) else (f"{tmin}%+" if tmin else "THC ?")}</div>
             </div>
         </a>"""
 
@@ -232,10 +233,10 @@ async def terpene_page(terp_slug: str, request: Request, page: int = Query(1, ge
 
     return render_page(f"""<div class="mb-6">
         <div class="text-5xl mb-2">{emoji}</div>
-        <h1 class="text-3xl font-display text-weed-400 capitalize">{terp_name}</h1>
+        <h1 class="text-3xl font-display text-weed-400 capitalize">{esc(terp_name)}</h1>
         <p class="text-neutral-400 mt-1">{total:,} strains{f' · {desc}' if desc else ''}</p>
         <a href="/browse/terpenes" class="text-xs text-neutral-500 hover:text-weed-400 mt-2 inline-block">← all terpenes</a>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{cards}</div>
     {pager}
-    """, f"{terp_name.title()} strains — WEED", request=request)
+    """, f"{esc(terp_name.title())} strains — WEED", request=request)

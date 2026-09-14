@@ -13,6 +13,7 @@ from backend.models.review import Review
 from backend.templates import render_page, strain_image_html
 from backend.models.wishlist import WishlistItem, DispensaryVisit
 from backend.services.lineage_parse import parse_parents, genetics_string
+from backend.services.escape import esc
 
 router = APIRouter(prefix="/strains", tags=["strains"])
 
@@ -134,7 +135,7 @@ async def strain_list(
             fallback_class="strain-card-image flex items-center justify-center text-5xl",
         )
 
-        breeder_tag = f'<span class="breeder-badge mt-1">👨‍🌾 {s.breeder[:35]}</span>' if s.breeder else ""
+        breeder_tag = f'<span class="breeder-badge mt-1">👨‍🌾 {esc(s.breeder[:35])}</span>' if s.breeder else ""
         stars = "★" * round(s.rating) + "☆" * (5 - round(s.rating))
 
         cards_html += f"""<div class="strain-card {type_class} relative">
@@ -150,11 +151,11 @@ async def strain_list(
             </label>
             <a href="/strains/{s.id}" class="block p-4">
                 <div class="flex items-start justify-between gap-2">
-                    <h3 class="font-semibold text-lg group-hover:text-weed-400 transition line-clamp-1 flex-1">{s.name}</h3>
+                    <h3 class="font-semibold text-lg group-hover:text-weed-400 transition line-clamp-1 flex-1">{esc(s.name)}</h3>
                     <span class="text-yellow-500 text-xs shrink-0">{stars}</span>
                 </div>
                 <div class="flex items-center gap-2 text-xs text-neutral-500 mt-0.5">
-                    <span class="capitalize">{s.strain_type}</span>
+                    <span class="capitalize">{esc(s.strain_type)}</span>
                     <span>·</span>
                     <span class="font-medium text-weed-400">{s.thc_display}</span>
                 </div>
@@ -181,9 +182,9 @@ async def strain_list(
 
     # Active filter tags
     active_filters_html = ""
-    if type_filter: active_filters_html += f'<span class="pill bg-weed-700 text-white text-xs">{type_filter.title()} <a href="?page={page}&search={search}&sort={sort}&breeder={breeder_filter}&effect={effect_filter}&terpene={terpene_filter}" class="ml-1 hover:text-white">&times;</a></span> '
-    if breeder_filter: active_filters_html += f'<span class="pill bg-weed-700 text-white text-xs">{breeder_filter[:40]} <a href="?page={page}&type={type_filter}&search={search}&sort={sort}&effect={effect_filter}&terpene={terpene_filter}" class="ml-1 hover:text-white">&times;</a></span> '
-    if effect_filter: active_filters_html += f'<span class="pill bg-weed-700 text-white text-xs">{effect_filter} <a href="?page={page}&type={type_filter}&search={search}&sort={sort}&breeder={breeder_filter}&terpene={terpene_filter}" class="ml-1 hover:text-white">&times;</a></span> '
+    if type_filter: active_filters_html += f'<span class="pill bg-weed-700 text-white text-xs">{esc(type_filter.title())} <a href="?page={page}&search={esc(search)}&sort={esc(sort)}&breeder={esc(breeder_filter)}&effect={esc(effect_filter)}&terpene={esc(terpene_filter)}" class="ml-1 hover:text-white">&times;</a></span> '
+    if breeder_filter: active_filters_html += f'<span class="pill bg-weed-700 text-white text-xs">{esc(breeder_filter[:40])} <a href="?page={page}&type={esc(type_filter)}&search={esc(search)}&sort={esc(sort)}&effect={esc(effect_filter)}&terpene={esc(terpene_filter)}" class="ml-1 hover:text-white">&times;</a></span> '
+    if effect_filter: active_filters_html += f'<span class="pill bg-weed-700 text-white text-xs">{esc(effect_filter)} <a href="?page={page}&type={esc(type_filter)}&search={esc(search)}&sort={esc(sort)}&breeder={esc(breeder_filter)}&terpene={esc(terpene_filter)}" class="ml-1 hover:text-white">&times;</a></span> '
 
     # Filters row — two rows, collapsed on mobile
     filters_html = f"""<div class="flex flex-wrap gap-3 items-end">
@@ -364,16 +365,16 @@ async def strain_compare(
         )
         cols_html += f"""<div class="flex flex-col">
             <a href="/strains/{s.id}" class="block mb-3">{img_html}</a>
-            <h3 class="font-semibold text-lg text-weed-400">{s.name}</h3>
-            {f'<span class="breeder-badge text-xs mt-1">👨‍🌾 {s.breeder[:40]}</span>' if s.breeder else ''}
+            <h3 class="font-semibold text-lg text-weed-400">{esc(s.name)}</h3>
+            {f'<span class="breeder-badge text-xs mt-1">👨‍🌾 {esc(s.breeder[:40])}</span>' if s.breeder else ''}
             <div class="text-yellow-500 text-sm mt-1">{star_str(s.rating)}</div>
-            <div class="text-xs text-neutral-500 mt-1 capitalize">{s.strain_type} · {s.thc_display}</div>
+            <div class="text-xs text-neutral-500 mt-1 capitalize">{esc(s.strain_type)} · {s.thc_display}</div>
             {f'<div class="text-xs text-neutral-500 mt-1">{s.sativa_pct or "?"}% S / {s.indica_pct or "?"}% I</div>' if s.sativa_pct or s.indica_pct else ''}
             {f'<div class="text-xs text-neutral-500 mt-1">🌱 {s.flowering_days}d · {s.seed_type}</div>' if s.flowering_days else ''}
             <hr class="border-glass my-3">
             <div class="space-y-2 text-sm">{effect_str(s)}</div>
             {f'<hr class="border-glass my-3"><div class="text-xs space-y-1">{terp_str(s)}</div>' if s.terpene_list else ''}
-            {f'<hr class="border-glass my-3"><div class="text-xs text-neutral-300"><strong>🧬</strong> {s.genetics[:80]}</div>' if s.genetics else ''}
+            {f'<hr class="border-glass my-3"><div class="text-xs text-neutral-300"><strong>🧬</strong> {esc(s.genetics[:80])}</div>' if s.genetics else ''}
             <div class="mt-auto pt-3">
                 <a href="/strains/{s.id}" class="btn btn-primary text-xs w-full text-center">View Details</a>
             </div>
@@ -562,7 +563,7 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
 
         # Genetics string
         if strain.genetics:
-            lineage_html += f'<div class="flex items-center gap-2 mb-4"><span class="pill">🧬 {strain.genetics}</span></div>'
+            lineage_html += f'<div class="flex items-center gap-2 mb-4"><span class="pill">🧬 {esc(strain.genetics)}</span></div>'
 
         # Build tree data for JS visualization
         tree_data = {"name": strain.name, "id": strain_id, "children": []}
@@ -574,8 +575,8 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
                 lineage_html += f'''<li>
                     <a href="/strains/{p.id}" class="lineage-tree-node">
                         <span>{p.type_emoji}</span>
-                        <span class="font-medium">{p.name}</span>
-                        <span class="text-xs text-neutral-500">{p.strain_type.title()} · {p.thc_display}</span>
+                        <span class="font-medium">{esc(p.name)}</span>
+                        <span class="text-xs text-neutral-500">{esc(p.strain_type.title())} · {esc(p.thc_display)}</span>
                     </a>
                 </li>'''
             lineage_html += '</ul></div>'
@@ -588,8 +589,8 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
                 lineage_html += f'''<li>
                     <a href="/strains/{c.id}" class="lineage-tree-node">
                         <span>{c.type_emoji}</span>
-                        <span class="font-medium">{c.name}</span>
-                        <span class="text-xs text-neutral-500">{c.strain_type.title()} · {c.thc_display}</span>
+                        <span class="font-medium">{esc(c.name)}</span>
+                        <span class="text-xs text-neutral-500">{esc(c.strain_type.title())} · {esc(c.thc_display)}</span>
                     </a>
                 </li>'''
             if len(child_links) > 8:
@@ -600,7 +601,7 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
 
         # Add D3.js tree visualization for lineages with data
         if parent_links or child_links:
-            tree_json = json.dumps(tree_data)
+            tree_json = json.dumps(tree_data).replace("<", "\\u003c")
             lineage_html += f'''<div class="mb-8 bg-elevated border rounded-xl p-6">
                 <h3 class="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">Family Tree</h3>
                 <div id="lineage-viz" class="w-full" style="min-height:200px">
@@ -681,7 +682,7 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
                     <a href="/strains/{pstrain.slug or pstrain.id}" class="lineage-tree-node">
                         <span>{pstrain.type_emoji}</span>
                         <span class="font-medium">{safe}</span>
-                        <span class="text-xs text-neutral-500">{pstrain.strain_type.title()} · {pstrain.thc_display}</span>
+                        <span class="text-xs text-neutral-500">{esc(pstrain.strain_type.title())} · {pstrain.thc_display}</span>
                     </a>
                 </li>'''
             else:
@@ -703,7 +704,7 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
         # Show breeder as genetics placeholder
         lineage_html = f'''<div class="mb-8"><h2 class="section-title">Genetic Lineage</h2>
         <div class="bg-elevated border rounded-xl p-6 text-center">
-            <p class="text-sm text-neutral-400">Bred by <strong class="text-neutral-200">{strain.breeder}</strong></p>
+            <p class="text-sm text-neutral-400">Bred by <strong class="text-neutral-200">{esc(strain.breeder)}</strong></p>
             <p class="text-xs text-neutral-500 mt-2">Lineage enrichment in progress — parents will appear here as we process genetic data.</p>
         </div></div>'''
     else:
@@ -819,8 +820,8 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
             cards += f"""<a href="/strains/{s.slug or s.id}" class="strain-card">
                 <div class="p-3">
                     <div class="mb-2">{img_html}</div>
-                    <h4 class="text-sm font-semibold group-hover:text-weed-400 transition">{s.name}</h4>
-                    <div class="text-xs text-neutral-500 mt-0.5">{s.strain_type.title()} · {s.thc_display}</div>
+                    <h4 class="text-sm font-semibold group-hover:text-weed-400 transition">{esc(s.name)}</h4>
+                    <div class="text-xs text-neutral-500 mt-0.5">{esc(s.strain_type.title())} · {esc(s.thc_display)}</div>
                     <div class="text-[10px] text-neutral-600 mt-1">{why}</div>
                 </div>
             </a>"""
@@ -838,11 +839,11 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
     # Badges row
     badges = f'<span class="pill {type_bg} {type_text} font-semibold">{type_label}</span>'
     if strain.is_landrace:
-        badges += f'<span class="pill bg-amber-900 text-amber-200">🌍 Landrace{f" · {strain.landrace_origin}" if strain.landrace_origin else ""}</span>'
+        badges += f'<span class="pill bg-amber-900 text-amber-200">🌍 Landrace{f" · {esc(strain.landrace_origin)}" if strain.landrace_origin else ""}</span>'
     if strain.genetics:
-        badges += f'<span class="pill">🧬 {strain.genetics[:40]}</span>'
+        badges += f'<span class="pill">🧬 {esc(strain.genetics[:40])}</span>'
     if strain.breeder:
-        badges += f'<a href="/strains?breeder={strain.breeder}" class="breeder-badge hover:text-weed-400 transition">👨‍🌾 {strain.breeder[:40]}</a>'
+        badges += f'<a href="/strains?breeder={esc(strain.breeder)}" class="breeder-badge hover:text-weed-400 transition">👨‍🌾 {esc(strain.breeder[:40])}</a>'
 
     stars = "★" * round(strain.rating) + "☆" * (5 - round(strain.rating))
 
@@ -875,7 +876,7 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
             </div>
             <div class="md:w-3/5 p-6 md:p-8 flex flex-col justify-center">
                 <div class="flex items-center gap-2 mb-2">{badges}</div>
-                <h1 class="text-4xl md:text-5xl font-display text-white mb-2">{strain.name}</h1>
+                <h1 class="text-4xl md:text-5xl font-display text-white mb-2">{esc(strain.name)}</h1>
                 <div class="flex items-center gap-2 mb-4">
                     <span class="text-yellow-500 text-lg">{stars}</span>
                     <span class="text-neutral-400">{strain.rating} ({int(strain.review_count or 0)} reviews)</span>
@@ -902,7 +903,7 @@ async def strain_detail(strain_id: str, request: Request, db: AsyncSession = Dep
         <!-- Type Card -->
         <div class="stat-card">
             <div class="text-3xl">{strain.type_emoji}</div>
-            <div class="text-xs text-neutral-500 mt-2 uppercase tracking-wider">{strain.strain_type.title()}</div>
+            <div class="text-xs text-neutral-500 mt-2 uppercase tracking-wider">{esc(strain.strain_type.title())}</div>
             {f'<div class="text-xs text-neutral-500 mt-1">{strain.sativa_pct or "?"}% S / {strain.indica_pct or "?"}% I</div>' if strain.sativa_pct or strain.indica_pct else ''}
         </div>
         <!-- Flowering Card -->

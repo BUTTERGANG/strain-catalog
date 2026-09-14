@@ -10,6 +10,7 @@ from backend.models.strain import Strain
 from backend.models.review import Review
 from backend.models.dispensary import Dispensary
 from backend.services.auth import hash_password
+from backend.services.escape import esc
 from backend.templates import render_page
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -42,7 +43,7 @@ async def admin_home(request: Request, db: AsyncSession = Depends(get_db)):
 
     return render_page(f"""<div class="mb-8">
         <h1 class="text-3xl font-display text-weed-400">🛠 Admin</h1>
-        <p class="text-neutral-500 text-sm">Signed in as {admin.username}</p>
+        <p class="text-neutral-500 text-sm">Signed in as {esc(admin.username)}</p>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">{stats_html}</div>
 
@@ -83,14 +84,14 @@ async def admin_strains(
     for s in strains:
         feat = "checked" if s.is_featured else ""
         rows += f"""<tr class="border-b border-glass">
-            <td class="py-2"><a href="/strains/{s.slug or s.id}" class="text-weed-400 hover:underline">{s.name}</a></td>
-            <td class="text-xs text-neutral-500">{s.strain_type}</td>
-            <td class="text-xs text-neutral-500">{s.source}</td>
+            <td class="py-2"><a href="/strains/{s.slug or s.id}" class="text-weed-400 hover:underline">{esc(s.name)}</a></td>
+            <td class="text-xs text-neutral-500">{esc(s.strain_type)}</td>
+            <td class="text-xs text-neutral-500">{esc(s.source)}</td>
             <td class="text-center">
                 <input type="checkbox" class="feat-cb" data-id="{s.id}" {feat} onchange="toggleFeatured(this)" style="accent-color:#22c55e">
             </td>
             <td class="text-center"><a href="/admin/strains/{s.id}/edit" class="text-xs text-weed-400 hover:underline">edit</a></td>
-            <td class="text-center"><button class="text-xs text-red-400 hover:text-red-300" onclick="deleteStrain('{s.id}', '{s.name}')">delete</a></td>
+            <td class="text-center"><button class="text-xs text-red-400 hover:text-red-300" data-id="{s.id}" data-name="{esc(s.name)}" onclick="deleteStrain(this.dataset.id, this.dataset.name)">delete</button></td>
         </tr>"""
 
     return render_page(f"""<div class="mb-6 flex items-center justify-between">
@@ -98,7 +99,7 @@ async def admin_strains(
         <a href="/admin" class="btn btn-ghost text-sm">← Admin</a>
     </div>
     <form method="get" action="/admin/strains" class="mb-4 flex gap-2">
-        <input type="text" name="q" value="{q}" placeholder="Search strains…" class="w-64">
+        <input type="text" name="q" value="{esc(q)}" placeholder="Search strains…" class="w-64">
         <button type="submit" class="btn btn-primary text-sm">Search</button>
     </form>
     <div class="bg-elevated border border-glass rounded-xl overflow-x-auto">
@@ -135,30 +136,30 @@ async def admin_edit_strain(strain_id: str, request: Request, db: AsyncSession =
         return HTMLResponse("Strain not found", status_code=404)
 
     return render_page(f"""<div class="max-w-xl mx-auto">
-        <h1 class="text-2xl font-display text-weed-400 mb-6">Edit: {strain.name}</h1>
+        <h1 class="text-2xl font-display text-weed-400 mb-6">Edit: {esc(strain.name)}</h1>
         <form method="post" action="/admin/strains/{strain_id}/edit" class="space-y-4">
             <div><label class="text-xs text-neutral-500 block mb-1">Name</label>
-            <input type="text" name="name" value="{strain.name}" class="w-full"></div>
+            <input type="text" name="name" value="{esc(strain.name)}" class="w-full"></div>
             <div class="grid grid-cols-2 gap-4">
                 <div><label class="text-xs text-neutral-500 block mb-1">Type</label>
                 <select name="strain_type" class="w-full">
-                    {''.join(f'<option value="{t}" {"selected" if strain.strain_type == t else ""}>{t.title()}</option>' for t in ['indica', 'sativa', 'hybrid'])}
+                    {''.join(f'<option value="{esc(t)}" {"selected" if strain.strain_type == t else ""}>{esc(t.title())}</option>' for t in ['indica', 'sativa', 'hybrid'])}
                 </select></div>
                 <div><label class="text-xs text-neutral-500 block mb-1">Breeder</label>
-                <input type="text" name="breeder" value="{strain.breeder}" class="w-full"></div>
+                <input type="text" name="breeder" value="{esc(strain.breeder)}" class="w-full"></div>
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div><label class="text-xs text-neutral-500 block mb-1">THC min</label>
-                <input type="number" step="0.1" name="thc_min" value="{strain.thc_min or ''}" class="w-full"></div>
+                <input type="number" step="0.1" name="thc_min" value="{esc(strain.thc_min) if strain.thc_min is not None else ''}" class="w-full"></div>
                 <div><label class="text-xs text-neutral-500 block mb-1">THC max</label>
-                <input type="number" step="0.1" name="thc_max" value="{strain.thc_max or ''}" class="w-full"></div>
+                <input type="number" step="0.1" name="thc_max" value="{esc(strain.thc_max) if strain.thc_max is not None else ''}" class="w-full"></div>
             </div>
             <div><label class="text-xs text-neutral-500 block mb-1">Genetics</label>
-            <input type="text" name="genetics" value="{strain.genetics}" class="w-full"></div>
+            <input type="text" name="genetics" value="{esc(strain.genetics)}" class="w-full"></div>
             <div><label class="text-xs text-neutral-500 block mb-1">Description</label>
-            <textarea name="description" rows="4" class="w-full">{strain.description}</textarea></div>
+            <textarea name="description" rows="4" class="w-full">{esc(strain.description)}</textarea></div>
             <div><label class="text-xs text-neutral-500 block mb-1">Image URL</label>
-            <input type="text" name="image_url" value="{strain.image_url}" class="w-full"></div>
+            <input type="text" name="image_url" value="{esc(strain.image_url)}" class="w-full"></div>
             <div class="flex gap-3">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a href="/admin/strains" class="btn btn-ghost">Cancel</a>
@@ -242,8 +243,8 @@ async def admin_users(request: Request, db: AsyncSession = Depends(get_db)):
         admin_badge = '<span class="pill bg-weed-700 text-xs">admin</span>' if u.is_admin else ""
         toggle = f'<button class="text-xs text-weed-400 hover:underline" onclick="toggleAdmin(\'{u.id}\')">{"revoke" if u.is_admin else "promote"}</button>' if u.id != admin.id else ""
         rows += f"""<tr class="border-b border-glass">
-            <td class="py-3">{u.username} {admin_badge}</td>
-            <td class="text-xs text-neutral-500">{u.email}</td>
+            <td class="py-3">{esc(u.username)} {admin_badge}</td>
+            <td class="text-xs text-neutral-500">{esc(u.email)}</td>
             <td class="text-xs text-neutral-500">{u.created_at.strftime('%b %d, %Y') if u.created_at else ''}</td>
             <td class="text-right">{toggle}</td>
         </tr>"""

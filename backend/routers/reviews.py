@@ -8,6 +8,7 @@ from backend.models.strain import Strain
 from backend.models.review import Review
 from backend.models.dispensary import Dispensary
 from backend.templates import LOGO_SVG, FAVICON_LINK
+from backend.services.escape import esc
 
 
 async def _resync_strain_rating(strain_id: str, db: AsyncSession) -> None:
@@ -40,10 +41,10 @@ async def add_review_page(strain_id: str, request: Request, db: AsyncSession = D
 
     dispo_options = '<option value="">None (home/general)</option>'
     for d in dispos:
-        dispo_options += f'<option value="{d.id}">{d.name} — {d.city}, {d.state}</option>'
+        dispo_options += f'<option value="{d.id}">{esc(d.name)} — {esc(d.city)}, {esc(d.state)}</option>'
 
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Review {strain.name} — WEED</title>{FAVICON_LINK}<link rel="stylesheet" href="/static/css/app.css"></head>
+    <title>Review {esc(strain.name)} — WEED</title>{FAVICON_LINK}<link rel="stylesheet" href="/static/css/app.css"></head>
     <body class="bg-black text-white min-h-screen">
     <nav class="bg-neutral-900 border-b border-neutral-800 px-4 py-3">
     <div class="max-w-6xl mx-auto flex items-center justify-between">
@@ -56,7 +57,7 @@ async def add_review_page(strain_id: str, request: Request, db: AsyncSession = D
     </div>
     </nav>
     <main class="max-w-2xl mx-auto px-4 py-8">
-    <div class="mb-6"><h1 class="text-2xl font-display text-weed-400">Write a Review</h1><p class="text-neutral-400">for <a href="/strains/{strain.id}" class="text-weed-400 hover:underline">{strain.name}</a></p></div>
+    <div class="mb-6"><h1 class="text-2xl font-display text-weed-400">Write a Review</h1><p class="text-neutral-400">for <a href="/strains/{strain.id}" class="text-weed-400 hover:underline">{esc(strain.name)}</a></p></div>
     <form method="post" action="/reviews/add/{strain_id}" class="space-y-4">
         <div><label class="block text-sm text-neutral-400 mb-1">Rating</label>
         <div class="flex gap-2 text-2xl" id="rating-picker">

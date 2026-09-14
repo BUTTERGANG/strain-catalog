@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db, async_session
 from backend.models.strain import Strain
 from backend.templates import render_page, strain_image_html
+from backend.services.escape import esc
 
 router = APIRouter(prefix="/breeders", tags=["breeders"])
 
@@ -43,7 +44,7 @@ async def breeder_index(request: Request, q: str = Query(""), db: AsyncSession =
         cards += f"""<a href="/breeders/{slug}" class="strain-card p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <h3 class="font-semibold group-hover:text-weed-400 transition">👨‍🌾 {breeder}</h3>
+                    <h3 class="font-semibold group-hover:text-weed-400 transition">👨‍🌾 {esc(breeder)}</h3>
                     <p class="text-xs text-neutral-500 mt-1">{n} strain{'s' if n != 1 else ''}{f' · avg ★ {avg}' if avg else ''}</p>
                 </div>
                 <span class="text-neutral-600">→</span>
@@ -57,7 +58,7 @@ async def breeder_index(request: Request, q: str = Query(""), db: AsyncSession =
         <p class="text-neutral-400 mt-1">{len(rows)} breeders — the genetics houses behind the catalog</p>
     </div>
     <form method="get" action="/breeders" class="mb-6">
-        <input type="text" name="q" value="{q}" placeholder="Search breeders…" class="w-64">
+        <input type="text" name="q" value="{esc(q)}" placeholder="Search breeders…" class="w-64">
         <button type="submit" class="btn btn-primary ml-2">Search</button>
     </form>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{cards}</div>
@@ -111,8 +112,8 @@ async def breeder_page(breeder_slug: str, request: Request, page: int = Query(1,
         cards += f"""<a href="/strains/{s.slug or s.id}" class="strain-card strain-card-{s.strain_type}">
             {image_html}
             <div class="p-4">
-                <h3 class="font-semibold group-hover:text-weed-400 transition">{s.name}</h3>
-                <div class="text-xs text-neutral-500 mt-1">{s.strain_type.title()} · {s.thc_display}</div>
+                <h3 class="font-semibold group-hover:text-weed-400 transition">{esc(s.name)}</h3>
+                <div class="text-xs text-neutral-500 mt-1">{esc(s.strain_type.title())} · {s.thc_display}</div>
                 <div class="text-yellow-500 text-xs mt-1">{'★' * round(s.rating or 0)}{'☆' * (5 - round(s.rating or 0))}</div>
             </div>
         </a>"""
@@ -132,10 +133,10 @@ async def breeder_page(breeder_slug: str, request: Request, page: int = Query(1,
     type_dist = " · ".join(f"{n} {t}" for t, n in stats)
 
     html = render_page(f"""<div class="mb-6">
-        <h1 class="text-3xl font-display text-weed-400">👨‍🌾 {match}</h1>
+        <h1 class="text-3xl font-display text-weed-400">👨‍🌾 {esc(match)}</h1>
         <p class="text-neutral-400 mt-1">{total} strains{f' · avg ★ {round(avg_rating, 1)}' if avg_rating else ''} · {type_dist}</p>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">{cards}</div>
     {pager}
-    """, f"{match} — WEED", request=request)
+    """, f"{esc(match)} — WEED", request=request)
     return html

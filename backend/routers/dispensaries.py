@@ -8,6 +8,7 @@ from backend.database import get_db
 from backend.models.dispensary import Dispensary, MenuItem
 from backend.models.strain import Strain
 from backend.templates import render_page
+from backend.services.escape import esc
 
 router = APIRouter(prefix="/dispensaries", tags=["dispensaries"])
 
@@ -68,8 +69,8 @@ async def dispensary_list(
             <div class="p-4 flex items-start gap-3">
                 <div class="w-12 h-12 bg-elevated rounded-lg flex items-center justify-center text-xl shrink-0">🏪</div>
                 <div class="min-w-0">
-                    <h3 class="font-semibold group-hover:text-weed-400 transition truncate">{d.name}</h3>
-                    <p class="text-xs text-neutral-500">{d.city}, {d.state}{f' · ★ {d.rating}' if d.rating else ''}</p>
+                    <h3 class="font-semibold group-hover:text-weed-400 transition truncate">{esc(d.name)}</h3>
+                    <p class="text-xs text-neutral-500">{esc(d.city)}, {esc(d.state)}{f' · ★ {d.rating}' if d.rating else ''}</p>
                     <div class="flex gap-2 mt-1">{delivery_tag}<span class="text-xs text-neutral-500 capitalize">{d.license_type or "recreational"}</span></div>
                 </div>
             </div>
@@ -91,15 +92,15 @@ async def dispensary_list(
         <div class="flex flex-wrap gap-3 items-end">
             <div>
                 <label class="text-xs text-neutral-500 block mb-1">Search</label>
-                <input type="text" name="search" value="{search}" placeholder="Dispensary name..." class="w-40 md:w-48">
+                <input type="text" name="search" value="{esc(search)}" placeholder="Dispensary name..." class="w-40 md:w-48">
             </div>
             <div>
                 <label class="text-xs text-neutral-500 block mb-1">State</label>
-                <input type="text" name="state" value="{state}" placeholder="CA, CO, ..." class="w-28">
+                <input type="text" name="state" value="{esc(state)}" placeholder="CA, CO, ..." class="w-28">
             </div>
             <div>
                 <label class="text-xs text-neutral-500 block mb-1">City</label>
-                <input type="text" name="city" value="{city}" placeholder="City" class="w-32">
+                <input type="text" name="city" value="{esc(city)}" placeholder="City" class="w-32">
             </div>
             <div class="flex gap-2">
                 <button type="submit" class="btn btn-primary">Filter</button>
@@ -149,8 +150,8 @@ async def dispensary_detail(dispensary_id: str, request: Request, db: AsyncSessi
                 og_str = f'<span class="line-through text-neutral-600 text-xs">${item.price_original:.0f}</span> ' if item.price_original else ''
                 thc_str = f' · <span class="text-weed-400">{item.thc_content}</span>' if item.thc_content else ''
                 menu_html += f"""<div class="bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-3 flex items-center justify-between">
-                    <div><div class="font-medium text-sm">{item.name}</div>
-                    <div class="text-xs text-neutral-500">{item.brand}{thc_str}</div></div>
+                    <div><div class="font-medium text-sm">{esc(item.name)}</div>
+                    <div class="text-xs text-neutral-500">{esc(item.brand)}{thc_str}</div></div>
                     <div class="text-right"><div class="text-sm font-semibold text-weed-400">{og_str}{price_str}</div></div>
                 </div>"""
             menu_html += "</div></div>"
@@ -160,20 +161,20 @@ async def dispensary_detail(dispensary_id: str, request: Request, db: AsyncSessi
     html = render_page(f"""<div class="flex flex-col md:flex-row gap-8 mb-8">
         <div class="md:w-1/3">
             <div class="bg-elevated border border-glass rounded-xl p-4 space-y-3">
-                <h1 class="text-2xl font-display text-weed-400">{dispo.name}</h1>
-                {f'<p class="text-sm text-neutral-300">{dispo.address}</p>' if dispo.address else ''}
-                <p class="text-sm text-neutral-400">{dispo.city}, {dispo.state} {dispo.zip_code}</p>
+                <h1 class="text-2xl font-display text-weed-400">{esc(dispo.name)}</h1>
+                {f'<p class="text-sm text-neutral-300">{esc(dispo.address)}</p>' if dispo.address else ''}
+                <p class="text-sm text-neutral-400">{esc(dispo.city)}, {esc(dispo.state)} {esc(dispo.zip_code)}</p>
                 {f'<div class="flex items-center gap-1"><span class="text-yellow-500 text-sm">{chr(9733) * round(dispo.rating) if dispo.rating else ""}</span><span class="text-sm text-neutral-400">{dispo.rating}</span></div>' if dispo.rating else ''}
-                {f'<a href="{dispo.website}" target="_blank" class="block text-sm text-weed-400 hover:underline">{dispo.website}</a>' if dispo.website else ''}
-                {f'<p class="text-sm text-neutral-300">📞 {dispo.phone}</p>' if dispo.phone else ''}
+                {f'<a href="{esc(dispo.website)}" target="_blank" class="block text-sm text-weed-400 hover:underline">{esc(dispo.website)}</a>' if dispo.website else ''}
+                {f'<p class="text-sm text-neutral-300">📞 {esc(dispo.phone)}</p>' if dispo.phone else ''}
                 <div class="flex gap-2 mt-2">
-                    <span class="pill capitalize">{dispo.license_type}</span>
+                    <span class="pill capitalize">{esc(dispo.license_type)}</span>
                     {'<span class="pill bg-green-900 text-green-200">🚚 Delivery</span>' if dispo.delivery_available else ''}
                 </div>
                 {f'<div class="text-xs text-neutral-500 space-y-1 pt-2 border-t border-glass">{hours_html}</div>' if hours_html else ''}
-                {f'<p class="text-sm text-neutral-300 mt-3">{dispo.description}</p>' if dispo.description else ''}
+                {f'<p class="text-sm text-neutral-300 mt-3">{esc(dispo.description)}</p>' if dispo.description else ''}
             </div>
-            {f'<div id="map" class="h-48 rounded-xl mt-4" data-lat="{dispo.lat}" data-lon="{dispo.lon}"></div>' if dispo.lat and dispo.lon else ''}
+            {f'<div id="map" class="h-48 rounded-xl mt-4" data-lat="{dispo.lat}" data-lon="{dispo.lon}" data-name="{esc(dispo.name)}"></div>' if dispo.lat and dispo.lon else ''}
         </div>
         <div class="md:w-2/3">
             <div class="flex items-center justify-between mb-4">
@@ -194,7 +195,7 @@ async def dispensary_detail(dispensary_id: str, request: Request, db: AsyncSessi
         if (!lat || !lon) return;
         var map = L.map(mapDiv, {{ zoomControl: false, attributionControl: false }}).setView([lat, lon], 14);
         L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png').addTo(map);
-        L.marker([lat, lon]).addTo(map).bindPopup('{dispo.name}');
+        L.marker([lat, lon]).addTo(map).bindPopup(mapDiv.dataset.name);
     }})();
-    </script>""", f"{dispo.name} — WEED", request=request)
+    </script>""", f"{esc(dispo.name)} — WEED", request=request)
     return html

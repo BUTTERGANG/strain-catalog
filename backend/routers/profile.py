@@ -69,10 +69,10 @@ async def profile_page(request: Request, db: AsyncSession = Depends(get_db)):
         wishlist_html += f"""<a href="/strains/{s.id}" class="strain-card strain-card-{s.strain_type if s.strain_type in ('indica','sativa','hybrid') else 'hybrid'}">
             <div class="p-4">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-semibold group-hover:text-weed-400 transition">{s.name}</h3>
+                    <h3 class="font-semibold group-hover:text-weed-400 transition">{esc(s.name)}</h3>
                     <span class="text-yellow-500 text-xs">{'★' * round(s.rating)}{'☆' * (5 - round(s.rating))}</span>
                 </div>
-                <div class="text-xs text-neutral-500 mt-1">{s.strain_type.title()} · {s.thc_display}</div>
+                <div class="text-xs text-neutral-500 mt-1">{esc(s.strain_type.title())} · {s.thc_display}</div>
                 <button class="text-xs text-red-400 mt-2 hover:text-red-300" onclick="fetch('/strains/{s.id}/wishlist',{{method:'POST'}}).then(()=>location.reload())">Remove</button>
             </div>
         </a>"""
@@ -100,8 +100,8 @@ async def profile_page(request: Request, db: AsyncSession = Depends(get_db)):
         visits_html += f"""<div class="bg-elevated border rounded-xl p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <a href="/dispensaries/{d.id}" class="font-medium text-sm hover:text-weed-400">{d.name}</a>
-                    <p class="text-xs text-neutral-500">{d.city}, {d.state}</p>
+                    <a href="/dispensaries/{d.id}" class="font-medium text-sm hover:text-weed-400">{esc(d.name)}</a>
+                    <p class="text-xs text-neutral-500">{esc(d.city)}, {esc(d.state)}</p>
                 </div>
                 {f'<span class="text-xs text-neutral-500">{v.visit_date.strftime("%b %d, %Y") if v.visit_date else ""}</span>' if v.visit_date else ''}
             </div>
@@ -114,8 +114,8 @@ async def profile_page(request: Request, db: AsyncSession = Depends(get_db)):
         <div class="mb-8">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-display text-weed-400">👤 {user.display_name or user.username}</h1>
-                    <p class="text-neutral-500 text-sm">{user.email}</p>
+                    <h1 class="text-3xl font-display text-weed-400">👤 {esc(user.display_name or user.username)}</h1>
+                    <p class="text-neutral-500 text-sm">{esc(user.email)}</p>
                 </div>
                 <a href="/auth/logout" class="btn btn-ghost text-sm">Sign Out</a>
             </div>
@@ -191,7 +191,7 @@ async def reset_password_page(request: Request, token: str = Query("")):
     return render_page(f"""<div class="max-w-sm mx-auto py-12">
         <h1 class="text-2xl font-display text-weed-400 mb-2 text-center">Reset Password</h1>
         <form method="post" action="/profile/reset-password" class="space-y-4">
-            <input type="hidden" name="token" value="{token}">
+            <input type="hidden" name="token" value="{esc(token)}">
             <div>
                 <label class="text-xs text-neutral-500 block mb-1">New Password</label>
                 <input type="password" name="password" required minlength="6" class="w-full">

@@ -9,6 +9,7 @@ from backend.database import get_db
 from backend.models.dispensary import Dispensary
 from backend.models.wishlist import DispensaryVisit
 from backend.templates import render_page
+from backend.services.escape import esc
 
 router = APIRouter(prefix="/visits", tags=["visits"])
 
@@ -24,7 +25,7 @@ async def add_visit_page(dispensary_id: str, request: Request, db: AsyncSession 
 
     return render_page(f"""<div class="max-w-lg mx-auto">
         <h1 class="text-2xl font-display text-weed-400 mb-1">📍 Log a Visit</h1>
-        <p class="text-neutral-400 mb-6">{dispo.name} — {dispo.city}, {dispo.state}</p>
+        <p class="text-neutral-400 mb-6">{esc(dispo.name)} — {esc(dispo.city)}, {esc(dispo.state)}</p>
         <form method="post" action="/visits/add/{dispensary_id}" class="space-y-4">
             <div>
                 <label class="text-xs text-neutral-500 block mb-1">Visit date</label>
@@ -37,7 +38,7 @@ async def add_visit_page(dispensary_id: str, request: Request, db: AsyncSession 
             <button type="submit" class="btn btn-primary w-full">📍 Check In</button>
         </form>
         <p class="text-xs text-neutral-600 mt-4">Tip: after checking in, write strain reviews and link them to this visit via the review form's dispensary dropdown.</p>
-    </div>""", f"Log Visit — {dispo.name} — WEED", request=request)
+    </div>""", f"Log Visit — {esc(dispo.name)} — WEED", request=request)
 
 
 @router.post("/add/{dispensary_id}")
